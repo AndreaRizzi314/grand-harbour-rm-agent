@@ -10,7 +10,7 @@
 - `src/otel_rm/web/index.html`: packaged streaming UI shell
 - `scripts/run_etl.py`: scrape and load command
 - `scripts/compute_load_fingerprint.py`: `LOAD_PROOF` generator
-- `render.yaml`, `Procfile`: Render deployment configuration
+- `render.yaml`: Render deployment configuration
 
 ## Local setup
 
