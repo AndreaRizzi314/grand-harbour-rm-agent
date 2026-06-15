@@ -195,6 +195,10 @@
         return "";
       }
 
+      function isRootAgentEnd(payload) {
+        return payload?.name === "otel-rm-agent" && (payload?.parent_ids?.length ?? 0) === 0;
+      }
+
       formEl.addEventListener("submit", (event) => {
         event.preventDefault();
         const question = questionEl.value.trim();
@@ -230,7 +234,16 @@
         source.addEventListener("on_tool_end", (evt) => addEvent("tool", evt.data));
         source.addEventListener("on_tool_start", (evt) => addEvent("tool", evt.data));
         source.addEventListener("on_chain_start", (evt) => addEvent("chain", evt.data));
-        source.addEventListener("on_chain_end", () => source.close());
+        source.addEventListener("on_chain_end", (evt) => {
+          try {
+            const payload = JSON.parse(evt.data);
+            if (isRootAgentEnd(payload)) {
+              source.close();
+            }
+          } catch (err) {
+            addEvent("parse-error", String(err));
+          }
+        });
 
         questionEl.value = "";
       });
