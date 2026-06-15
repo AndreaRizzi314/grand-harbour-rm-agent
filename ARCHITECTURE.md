@@ -30,7 +30,23 @@
 
 ## Required Decisions
 
-- Subagent: segment and mix questions are isolated to the `segment-analyst` subagent, which only receives `get_segment_mix` and `get_block_vs_transient_mix`.
+- Subagent: segment and mix questions are isolated to the `segment-analyst` subagent, which receives segment, block/transient, corporate-share, and company-concentration semantic tools.
 - HITL: `get_as_of_otb` is explicitly gated through `interrupt_on={"get_as_of_otb": True}`.
 - Memory/filesystem: Deep Agents loads `/memory/AGENTS.md`, stores thread state with a checkpointer, and uses a filesystem backend so skills are loaded progressively rather than stuffed into one prompt.
-- No raw SQL tool: the model only receives the five business tools; SQL stays inside application code.
+- No raw SQL tool: the model only receives named business tools; SQL stays inside application code.
+
+## Tests
+
+- `tests/test_etl.py` validates scrape/load proofs, row counts, lookup tables, and manifest reconciliation.
+- `tests/test_tools.py` runs against loaded Postgres and covers required tool scenarios plus extra semantic examples.
+- `tests/test_skills.py` validates skill frontmatter, coverage, routing declarations, and judgment thresholds/actions.
+- `tests/test_agent.py` validates the tool surface, HITL gate, subagent isolation, runtime skill loading, memory, and multi-tool trace.
+- `tests/test_api.py` covers hosted API behavior when no model key is configured.
+
+## Deployment And Health
+
+- Render runs the FastAPI backend and packaged browser UI from `render.yaml`, `Procfile`, and `runtime.txt`.
+- Neon hosts Postgres; `DATABASE_URL` is injected as a Render environment variable.
+- Basic auth protects `/`, `/health`, `/api/chat`, and `/api/chat/stream`; `/ready` stays public for Render readiness.
+- `OPENAI_API_KEY` and model settings are environment variables, never committed.
+- `/health` returns `status`, `db_fingerprint`, `dataset_revision`, `row_hash`, and posted-row count so reviewers can compare the live database to `etl/LOAD_PROOF.json`.

@@ -8,7 +8,7 @@ before starting Phase 1. Keep answers concise - a few sentences per prompt.
 ## Candidate
 
 - Name: Andrea Rizzi 
-- Repository URL: to be attached after remote creation
+- Repository URL: https://github.com/AndreaRizzi314/grand-harbour-rm-agent
 - Date: 15/06/2026
 
 ---
@@ -100,4 +100,4 @@ Name one revenue-manager question that should load a **skill** but call **`get_s
 Describe pagination strategy + idempotency approach + **anchor date** you will
 scrape against (must match `/verify` on load day).
 
-> Your answer: Use Playwright to paginate the rendered reservation list 100 rows at a time and open every detail page, then run an idempotent truncate-and-reload ETL with `load_manifest` hashing, scraping against the same-day `/verify` anchor date of 14/06/2026.
+> Your answer: Use Playwright to paginate the rendered reservation list 100 rows at a time and open every detail page, then run an idempotent truncate-and-reload ETL with `load_manifest` hashing, scraping against the same-day `/verify` anchor date of 15/06/2026.
