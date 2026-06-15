@@ -182,17 +182,60 @@
         eventLogEl.scrollTop = eventLogEl.scrollHeight;
       }
 
+      function unescapeMessageText(text) {
+        return text
+          .replace(/\\n/g, "\n")
+          .replace(/\\'/g, "'")
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, "\\");
+      }
+
+      function extractFromMessageString(value) {
+        if (!value.includes("name='otel-rm-agent'") || !value.includes("additional_kwargs=")) {
+          return "";
+        }
+        if (value.includes("tool_calls=[{") && !value.includes("tool_calls=[]")) {
+          return "";
+        }
+        const match = value.match(/content='([\s\S]*?)'\s+additional_kwargs=/);
+        const text = match ? unescapeMessageText(match[1]).trim() : "";
+        return text.startsWith("{") ? "" : text;
+      }
+
+      function collectAssistantText(value, candidates = []) {
+        if (!value) return candidates;
+        if (typeof value === "string") {
+          const text = extractFromMessageString(value);
+          if (text) candidates.push(text);
+          return candidates;
+        }
+        if (Array.isArray(value)) {
+          value.forEach((item) => collectAssistantText(item, candidates));
+          return candidates;
+        }
+        if (typeof value === "object") {
+          if (value.name === "otel-rm-agent" && typeof value.content === "string") {
+            const text = value.content.trim();
+            if (text && !text.startsWith("{")) candidates.push(text);
+          }
+          Object.values(value).forEach((item) => collectAssistantText(item, candidates));
+        }
+        return candidates;
+      }
+
       function extractAssistantText(payload) {
         const output = payload?.data?.output;
         const content = output?.content ?? [];
         if (Array.isArray(content)) {
-          return content.map((item) => item.text || "").join("");
+          const text = content.map((item) => item.text || "").join("").trim();
+          if (text) return text;
         }
         if (typeof output === "string") {
-          const match = output.match(/content='([\s\S]*?)'\s+additional_kwargs=/);
-          return match ? match[1].replace(/\\n/g, "\n") : "";
+          const text = extractFromMessageString(output);
+          if (text) return text;
         }
-        return "";
+        const candidates = collectAssistantText(payload);
+        return candidates.at(-1) ?? "";
       }
 
       function isRootAgentEnd(payload) {
@@ -211,15 +254,20 @@
         const source = new EventSource(streamUrl);
         let finalText = "";
 
+        function applyAssistantText(evt) {
+          const payload = JSON.parse(evt.data);
+          const text = extractAssistantText(payload);
+          if (text) {
+            finalText = text;
+            assistantNode.textContent = text;
+          }
+          return payload;
+        }
+
         source.onmessage = (evt) => addEvent("message", evt.data);
         source.addEventListener("on_chat_model_end", (evt) => {
           try {
-            const payload = JSON.parse(evt.data);
-            const text = extractAssistantText(payload);
-            if (text) {
-              finalText = text;
-              assistantNode.textContent = text;
-            }
+            applyAssistantText(evt);
           } catch (err) {
             addEvent("parse-error", String(err));
           }
@@ -233,10 +281,17 @@
         });
         source.addEventListener("on_tool_end", (evt) => addEvent("tool", evt.data));
         source.addEventListener("on_tool_start", (evt) => addEvent("tool", evt.data));
-        source.addEventListener("on_chain_start", (evt) => addEvent("chain", evt.data));
+        source.addEventListener("on_chain_start", (evt) => {
+          addEvent("chain", evt.data);
+          try {
+            applyAssistantText(evt);
+          } catch (err) {
+            addEvent("parse-error", String(err));
+          }
+        });
         source.addEventListener("on_chain_end", (evt) => {
           try {
-            const payload = JSON.parse(evt.data);
+            const payload = applyAssistantText(evt);
             if (isRootAgentEnd(payload)) {
               source.close();
             }
