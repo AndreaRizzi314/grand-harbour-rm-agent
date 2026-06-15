@@ -182,6 +182,19 @@
         eventLogEl.scrollTop = eventLogEl.scrollHeight;
       }
 
+      function extractAssistantText(payload) {
+        const output = payload?.data?.output;
+        const content = output?.content ?? [];
+        if (Array.isArray(content)) {
+          return content.map((item) => item.text || "").join("");
+        }
+        if (typeof output === "string") {
+          const match = output.match(/content='([\s\S]*?)'\s+additional_kwargs=/);
+          return match ? match[1].replace(/\\n/g, "\n") : "";
+        }
+        return "";
+      }
+
       formEl.addEventListener("submit", (event) => {
         event.preventDefault();
         const question = questionEl.value.trim();
@@ -198,8 +211,7 @@
         source.addEventListener("on_chat_model_end", (evt) => {
           try {
             const payload = JSON.parse(evt.data);
-            const content = payload?.data?.output?.content ?? [];
-            const text = content.map((item) => item.text || "").join("");
+            const text = extractAssistantText(payload);
             if (text) {
               finalText = text;
               assistantNode.textContent = text;
