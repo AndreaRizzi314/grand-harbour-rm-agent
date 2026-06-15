@@ -1,2 +1,0 @@
--- Intentionally empty. The challenge dataset is loaded via your ETL pipeline,
--- not from a seed file. This file exists so docker compose init succeeds.

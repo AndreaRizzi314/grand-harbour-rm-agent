@@ -1,42 +1,16 @@
 # Grand Harbour Revenue Manager Agent
 
-Standalone solution repository for the OTel AI Build Challenge. This repository is intended to be the submission repo, not a fork of the brief.
-
-## What is included
-
-- Browser-based Playwright ETL that scrapes the live rendered data site
-- Idempotent Postgres load with `load_manifest`
-- Required semantic views in `sql/VIEWS.sql`
-- All five required agent-facing tools with fixed business semantics
-- Deep Agents harness with:
-  - filesystem-backed skills
-  - memory file
-  - segment-mix subagent
-  - HITL gate on `get_as_of_otb`
-- Required artifacts:
-  - `ATTESTATION.md`
-  - `ARCHITECTURE.md`
-  - `etl/SCRAPE_MANIFEST.json`
-  - `etl/LOAD_PROOF.json`
-  - `tools/METRIC_DEFINITIONS.md`
-  - `tests/test_etl.py`
-  - `tests/test_tools.py`
-  - `tests/test_skills.py`
-  - `tests/test_agent.py`
-
 ## Repo structure
 
 - `src/otel_rm/etl`: scraper, models, load logic
-- `src/otel_rm/tools`: required tool layer plus semantic helpers for room-type ADR, cancellations, OTB trend, corporate share, and company concentration
+- `src/otel_rm/tools`: required tool layer plus semantic helpers for room type ADR, cancellations, OTB trend, corporate share, and company concentration
 - `src/otel_rm/agent`: Deep Agents factory and health payload
 - `skills/`: on-demand skill pack
-- `memory/AGENTS.md`: long-term operating memory
-- `web/index.html`: minimal streaming UI shell
+- `memory/AGENTS.md`: long term operating memory
+- `src/otel_rm/web/index.html`: packaged streaming UI shell
 - `scripts/run_etl.py`: scrape and load command
 - `scripts/compute_load_fingerprint.py`: `LOAD_PROOF` generator
-- `docs/AGENT_WORKFLOWS.md`: reviewer-style workflow test matrix
-- `docs/HOSTING_PLAN.md`: planned production hosting checklist
-- `render.yaml`, `Procfile`, `runtime.txt`: Render deployment configuration
+- `render.yaml`, `Procfile`: Render deployment configuration
 
 ## Local setup
 
@@ -80,7 +54,7 @@ The app is protected with HTTP basic auth from `.env`, streams tool and skill ev
 
 ## Render settings
 
-Set the Python version to `3.12.13`. The repo includes both `runtime.txt` and `.python-version`, but Render also supports setting `PYTHON_VERSION=3.12.13` as an environment variable.
+Set the Python version to `3.12.13`. The repo includes `.python-version`, and Render also supports setting `PYTHON_VERSION=3.12.13` as an environment variable.
 
 Build command:
 
@@ -103,18 +77,3 @@ uvicorn otel_rm.api:app --host 0.0.0.0 --port $PORT
 - `posted_stay_rows`: `258`
 - `dataset_revision`: `2026.06.12.2`
 - `reservation_stay_status_sha256`: `e98695ff7148e8579b26ed482597c2e06d59d724056a4dcb8b2a23823819ebb8`
-
-## Deployment notes
-
-To satisfy the brief fully in production, deploy:
-
-- a hosted Postgres loaded by this ETL
-- the FastAPI app with `OPENAI_API_KEY`
-- the web UI behind HTTP basic auth
-
-The `/health` response is designed to match the brief fields:
-
-- `db_fingerprint`
-- `dataset_revision`
-- `row_hash`
-- `financial_status_posted_only_rows`
