@@ -129,9 +129,9 @@
           </p>
         </div>
         <div class="card stats">
-          <div class="stat"><strong id="health-status">Loading…</strong><span>Health</span></div>
-          <div class="stat"><strong id="dataset-revision">—</strong><span>Dataset revision</span></div>
-          <div class="stat"><strong id="posted-rows">—</strong><span>Posted OTB rows</span></div>
+          <div class="stat"><strong id="health-status">Loading...</strong><span>Health</span></div>
+          <div class="stat"><strong id="dataset-revision">--</strong><span>Dataset revision</span></div>
+          <div class="stat"><strong id="posted-rows">--</strong><span>Posted OTB rows</span></div>
         </div>
       </section>
 
@@ -162,8 +162,8 @@
         const response = await fetch("/health");
         const data = await response.json();
         document.getElementById("health-status").textContent = data.status ?? "unknown";
-        document.getElementById("dataset-revision").textContent = data.dataset_revision ?? "—";
-        document.getElementById("posted-rows").textContent = data.financial_status_posted_only_rows ?? "—";
+        document.getElementById("dataset-revision").textContent = data.dataset_revision ?? "--";
+        document.getElementById("posted-rows").textContent = data.financial_status_posted_only_rows ?? "--";
       }
 
       function addMessage(kind, text) {
@@ -187,7 +187,7 @@
         const question = questionEl.value.trim();
         if (!question) return;
         addMessage("user", question);
-        const assistantNode = addMessage("assistant", "Thinking…");
+        const assistantNode = addMessage("assistant", "Thinking...");
         eventLogEl.innerHTML = "";
 
         const streamUrl = `/api/chat/stream?q=${encodeURIComponent(question)}&thread_id=${encodeURIComponent(threadId)}`;
@@ -230,4 +230,3 @@
     </script>
   </body>
 </html>
-
