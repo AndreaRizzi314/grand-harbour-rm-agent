@@ -96,11 +96,13 @@ uvicorn otel_rm.api:app --host 0.0.0.0 --port $PORT
 
 ## Current verified load
 
-- Scrape date: `2026-06-14`
+- Scrape date: `2026-06-15`
 - `reservation_ids_count`: `254`
 - `pages_scraped`: `3`
+- `loaded_stay_rows`: `516`
+- `posted_stay_rows`: `258`
 - `dataset_revision`: `2026.06.12.2`
-- `reservation_stay_status_sha256`: `da950a13c377457604338e9823100d4d641b409937f7515d79c9a41081ddc1dd`
+- `reservation_stay_status_sha256`: `e98695ff7148e8579b26ed482597c2e06d59d724056a4dcb8b2a23823819ebb8`
 
 ## Deployment notes
 

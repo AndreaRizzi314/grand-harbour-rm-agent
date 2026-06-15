@@ -49,7 +49,7 @@ Which `reservation_status` and `financial_status` values are excluded from defau
 
 When can `property_date` differ from `stay_date`, and which field drives monthly OTB?
 
-> Your answer: `property_date` can differ from `stay_date` on night-boundary or audit rows, but monthly OTB should still be driven by stay_date, because OTB is about the night being stayed, not the hotel’s accounting business date.
+> Your answer: `property_date` can differ from `stay_date` on night-boundary or audit rows, but monthly OTB should still be driven by stay_date, because OTB is about the night being stayed, not the hotel's accounting business date.
 
 ### 7. Point-in-time OTB
 
