@@ -18,7 +18,16 @@ from otel_rm.tools.required import (
 )
 
 
-ROOT = Path(__file__).resolve().parents[3]
+def discover_project_root() -> Path:
+    module_root = Path(__file__).resolve().parents[3]
+    candidates = [Path.cwd(), module_root]
+    for candidate in candidates:
+        if (candidate / "skills").is_dir() and (candidate / "memory" / "AGENTS.md").is_file():
+            return candidate.resolve()
+    return module_root
+
+
+ROOT = discover_project_root()
 SKILLS_ROOT = ROOT / "skills"
 MEMORY_PATH = ROOT / "memory" / "AGENTS.md"
 

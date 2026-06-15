@@ -49,9 +49,15 @@ def test_skill_loading_is_on_demand():
     assert (ROOT / "skills").is_dir()
 
 
+def test_backend_can_see_runtime_skills_directory():
+    bundle = create_revenue_manager_agent()
+    listing = bundle.backend.ls("/skills")
+    assert listing.error is None
+    assert any(entry["path"].endswith("/otb-summary-triage/") for entry in listing.entries)
+
+
 def test_memory_or_filesystem_is_configured():
     bundle = create_revenue_manager_agent()
     assert bundle.memory_paths == ["/memory/AGENTS.md"]
     assert bundle.backend is not None
     assert bundle.store is not None
-
