@@ -16,7 +16,7 @@
    - `segment-analyst` subagent for mix work
    - HITL interrupt on `get_as_of_otb`
 
-## Skill → Tool Routing
+## Skill To Tool Routing
 
 | Skill | Primary tool(s) | Notes |
 |---|---|---|
