@@ -110,6 +110,8 @@ def create_revenue_manager_agent(model: object | None = None) -> RevenueManagerA
             resolved_model = init_chat_model(
                 settings.openai_model,
                 max_tokens=settings.openai_max_tokens,
+                reasoning_effort=settings.openai_reasoning_effort,
+                verbosity=settings.openai_verbosity,
             )
         else:
             resolved_model = FakeListChatModel(

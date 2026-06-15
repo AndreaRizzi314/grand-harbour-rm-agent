@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     )
     openai_api_key: str | None = None
     openai_model: str = "openai:gpt-5"
-    openai_max_tokens: int = 900
+    openai_max_tokens: int = 1500
+    openai_reasoning_effort: str = "minimal"
+    openai_verbosity: str = "low"
     basic_auth_username: str = "gm"
     basic_auth_password: str = "change-me"
     app_base_url: str = "http://127.0.0.1:8000"
