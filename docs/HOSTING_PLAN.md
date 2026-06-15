@@ -20,6 +20,14 @@ uvicorn otel_rm.api:app --host 0.0.0.0 --port $PORT
 The repository includes `render.yaml`, `Procfile`, and `runtime.txt` so Render can
 deploy the app directly after the GitHub repo is connected.
 
+Use Python `3.12.13`. If Render does not pick that up automatically, set
+`PYTHON_VERSION=3.12.13` in the Render environment variables. The build command
+must include the final `.`:
+
+```bash
+python -m pip install --upgrade pip setuptools wheel && python -m pip install .
+```
+
 ## Environment Variables
 
 Set these privately in the deployment platform:
@@ -30,6 +38,7 @@ OPENAI_API_KEY=<private model key>
 OPENAI_MODEL=openai:gpt-5
 BASIC_AUTH_USERNAME=<submission username>
 BASIC_AUTH_PASSWORD=<strong submission password>
+PYTHON_VERSION=3.12.13
 ```
 
 Do not commit real credentials. `.env.example` should remain blank for secrets.

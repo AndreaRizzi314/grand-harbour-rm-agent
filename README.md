@@ -78,6 +78,22 @@ Set `OPENAI_API_KEY` in `.env`, then start:
 
 The app is protected with HTTP basic auth from `.env`, streams tool and skill events from `/api/chat/stream`, and exposes `GET /health`.
 
+## Render settings
+
+Set the Python version to `3.12.13`. The repo includes both `runtime.txt` and `.python-version`, but Render also supports setting `PYTHON_VERSION=3.12.13` as an environment variable.
+
+Build command:
+
+```bash
+python -m pip install --upgrade pip setuptools wheel && python -m pip install .
+```
+
+Start command:
+
+```bash
+uvicorn otel_rm.api:app --host 0.0.0.0 --port $PORT
+```
+
 ## Current verified load
 
 - Scrape date: `2026-06-14`
