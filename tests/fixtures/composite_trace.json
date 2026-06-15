@@ -1,0 +1,9 @@
+{
+  "question": "What's driving July and how did we book lately?",
+  "tool_calls": [
+    "get_otb_summary",
+    "get_segment_mix",
+    "get_pickup_delta"
+  ]
+}
+

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: grand-harbour-rm-agent
+    runtime: python
+    plan: starter
+    buildCommand: python -m pip install --upgrade pip setuptools wheel && python -m pip install .
+    startCommand: uvicorn otel_rm.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /ready
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: openai:gpt-5
+      - key: BASIC_AUTH_USERNAME
+        sync: false
+      - key: BASIC_AUTH_PASSWORD
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+

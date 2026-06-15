@@ -1,0 +1,7 @@
+{
+  "anchor_date": "2026-06-14",
+  "pages_scraped": 3,
+  "reservation_ids_count": 254,
+  "reservation_ids_sha256": "aea16e722cb664db652aafc238066566537dc2f9013d2b51b14dd5d22272e85c",
+  "notes": "Scraped with Playwright from the rendered reservations list and detail pages. reservation_ids_count must match count(distinct reservation_id) in the database and total_reservations on /verify."
+}
