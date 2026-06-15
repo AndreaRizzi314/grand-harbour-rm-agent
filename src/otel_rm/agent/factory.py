@@ -6,6 +6,7 @@ from pathlib import Path
 from deepagents import create_deep_agent
 from deepagents.backends.filesystem import FilesystemBackend
 from deepagents.middleware.filesystem import FilesystemPermission
+from langchain.chat_models import init_chat_model
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
@@ -106,7 +107,10 @@ def create_revenue_manager_agent(model: object | None = None) -> RevenueManagerA
     resolved_model = model
     if resolved_model is None:
         if settings.openai_api_key:
-            resolved_model = settings.openai_model
+            resolved_model = init_chat_model(
+                settings.openai_model,
+                max_tokens=settings.openai_max_tokens,
+            )
         else:
             resolved_model = FakeListChatModel(
                 responses=["I need a configured model API key before I can answer live."]

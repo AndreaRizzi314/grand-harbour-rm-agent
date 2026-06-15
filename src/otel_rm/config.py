@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     )
     openai_api_key: str | None = None
     openai_model: str = "openai:gpt-5"
+    openai_max_tokens: int = 900
     basic_auth_username: str = "gm"
     basic_auth_password: str = "change-me"
     app_base_url: str = "http://127.0.0.1:8000"
@@ -28,4 +29,3 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()
-
