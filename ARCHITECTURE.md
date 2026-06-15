@@ -2,10 +2,10 @@
 
 ## 1. ETL boundary
 
-- **Extract:** `scripts/run_etl.py` uses Playwright to paginate the rendered reservation list at 100 reservations per page, opens every detail page, and also scrapes `/reference` and `/verify`.
-- **Transform:** rows are enforced at `reservation_id x stay_date` grain, typed into ETL models, and lookup/reference tables are loaded before facts.
-- **Load:** Postgres is loaded idempotently with truncate-and-reload plus a `load_manifest` row hash.
-- **Verify:** `etl/LOAD_PROOF.json` records row counts, hashes, anchor date, and aggregates that reconcile to `/verify`; final anchor date is `2026-06-15`.
+- **Extract:** `ReservationScraper.scrape_reservation_index()` opens `/reservations`, waits for table rows, parses each row's detail link, then clicks `data-testid="next-page"` until it is disabled. Each detail URL is opened in a new Playwright page; `RESERVATION FIELDS` are parsed into reservation-level fields and the first table is parsed into stay rows. `/reference` tabs and `/verify` are scraped in the same run.
+- **Transform:** detail-page stay rows become typed `ReservationRecord` objects at `reservation_id x stay_date` grain; reference tabs become lookup rows; raw commercial rate-plan strings are canonicalized before load.
+- **Load:** `load_dataset()` prepares schema, truncates fact/lookup/manifest tables, inserts lookups then stay rows, and writes `load_manifest(dataset_revision, scraped_at, source_url, row_hash)`.
+- **Verify:** `SCRAPE_MANIFEST.json` stores page count, reservation ID count, and ID hash; `LOAD_PROOF.json` stores DB row counts, aggregates, `/verify` values, and manifest validation. Final run scraped 3 pages / 254 reservations / 516 stay rows with anchor date `2026-06-15`.
 
 ## 2. Database and views
 
@@ -14,14 +14,14 @@
 
 ## 3. Tool layer
 
-- Five required tools: `get_otb_summary` uses `vw_stay_night_base`/history; `get_segment_mix` uses `vw_segment_stay_night`; `get_pickup_delta` uses `vw_segment_stay_night`; `get_as_of_otb` uses `vw_stay_night_history`; `get_block_vs_transient_mix` uses `vw_stay_night_base`.
-- Defaults: OTB excludes `reservation_status = 'Cancelled'` and `financial_status = 'Provisional'`; provisional/cancelled rows require explicit caveats.
+- Five required tools: `get_otb_summary(stay_month, exclude_cancelled)` uses current base/history; `get_segment_mix(stay_month, macro_group)` uses effective macro groups; `get_pickup_delta(booking_window_days, future_stay_from)` uses `create_datetime`; `get_as_of_otb(stay_month, as_of_utc)` reconstructs historical OTB; `get_block_vs_transient_mix(stay_month)` uses `is_block`.
+- Defaults: current OTB uses `vw_stay_night_base`, so `reservation_status = 'Cancelled'` and `financial_status = 'Provisional'` are excluded; provisional/cancelled rows require explicit caveats.
 - Arbitrary SQL is not exposed because grain, date-basis, cancellation, and revenue-field rules must stay inside semantic tools.
 - Grain definitions live in `tools/METRIC_DEFINITIONS.md`.
 
 ## 4. Deep Agents wiring
 
-| Building block | Your use |
+| Building block | Implementation |
 |---|---|
 | Tools | Five required tools plus additive semantic helpers; no `run_sql` |
 | Skills | 7 `SKILL.md` files with progressive disclosure |
@@ -45,8 +45,9 @@
 
 ## 6. Agent tests
 
-- `tests/test_agent.py` asserts the required tool surface, no `run_sql`, HITL on `get_as_of_otb`, segment subagent routing, filesystem skill loading, memory, and multi-tool trace.
-- `tests/test_skills.py` validates skill frontmatter, unique routing, topic coverage, guardrails, and at least 3 judgment skills with thresholds/actions.
+- `tests/test_agent.py` asserts the exact five required tool names, no `run_sql`, HITL on `get_as_of_otb`, segment subagent routing, filesystem skill loading, memory, and multi-tool trace.
+- `tests/test_skills.py` validates skill frontmatter, unique routing, topic coverage, adversarial guardrails, and at least 3 judgment skills with thresholds/actions.
+- `tests/test_tools.py` runs against loaded Postgres and checks grain, cancellations/provisional exclusions, pickup windows, as-of snapshots, property-date traps, block reconciliation, and extra semantic helpers.
 
 ## 7. Deployment topology
 
