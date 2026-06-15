@@ -4,10 +4,16 @@ import inspect
 import math
 
 from otel_rm.tools.required import (
+    ADDITIONAL_SEMANTIC_TOOLS,
     get_as_of_otb,
     get_block_vs_transient_mix,
+    get_cancellation_summary,
+    get_company_concentration,
+    get_corporate_share,
+    get_monthly_otb_trend,
     get_otb_summary,
     get_pickup_delta,
+    get_room_type_adr,
     get_segment_mix,
 )
 
@@ -211,9 +217,79 @@ def test_tool_surface_is_isolated_and_docstrings_are_grain_aware():
         get_pickup_delta,
         get_as_of_otb,
         get_block_vs_transient_mix,
+        get_room_type_adr,
+        get_cancellation_summary,
+        get_monthly_otb_trend,
+        get_corporate_share,
+        get_company_concentration,
     ]:
         signature = inspect.signature(fn)
         assert "sql" not in signature.parameters
         assert "query" not in signature.parameters
         assert fn.__doc__ is not None
         assert "grain" in fn.__doc__.lower()
+
+
+def test_room_type_adr_answers_example_question():
+    result = get_room_type_adr("2026-07")
+    assert result["highest_adr_room_type"] == result["room_types"][0]
+    assert result["room_types"] == sorted(
+        result["room_types"],
+        key=lambda item: (item["adr"], item["room_revenue"]),
+        reverse=True,
+    )
+    for room_type in result["room_types"]:
+        assert room_type["room_nights"] > 0
+        assert math.isclose(
+            room_type["adr"],
+            room_type["room_revenue"] / room_type["room_nights"],
+            abs_tol=1e-6,
+        )
+
+
+def test_cancellation_summary_supports_stay_and_activity_basis():
+    stay_basis = get_cancellation_summary("2026-06", date_basis="stay_date")
+    activity_basis = get_cancellation_summary("2026-06", date_basis="cancellation_date")
+    assert stay_basis["date_basis"] == "stay_date"
+    assert activity_basis["date_basis"] == "cancellation_date"
+    for result in [stay_basis, activity_basis]:
+        assert result["room_nights"] >= result["reservation_count"]
+        assert result["room_revenue"] <= result["total_revenue"]
+
+
+def test_monthly_otb_trend_reconciles_to_summary():
+    trend = get_monthly_otb_trend("2026-06", "2026-08")
+    assert [row["stay_month"] for row in trend["months"]] == ["2026-06", "2026-07", "2026-08"]
+    july = next(row for row in trend["months"] if row["stay_month"] == "2026-07")
+    summary = get_otb_summary("2026-07")
+    assert july["row_count"] == summary["row_count"]
+    assert july["room_nights"] == summary["room_nights"]
+    assert july["total_revenue"] == summary["total_revenue"]
+
+
+def test_corporate_share_is_bounded_and_explicit_about_mice_groups():
+    strict = get_corporate_share("2026-06", "2026-08")
+    expanded = get_corporate_share("2026-06", "2026-08", include_mice_groups=True)
+    assert 0.0 <= strict["corporate"]["share_of_room_nights"] <= 1.0
+    assert 0.0 <= strict["corporate"]["share_of_revenue"] <= 1.0
+    assert expanded["corporate"]["room_nights"] >= strict["corporate"]["room_nights"]
+    assert expanded["include_mice_groups"] is True
+
+
+def test_company_concentration_can_exclude_transient_bucket():
+    with_transient = get_company_concentration("2026-09", include_transient=True)
+    account_only = get_company_concentration("2026-09", include_transient=False)
+    assert with_transient["companies"][0]["company_name"] == "Transient"
+    assert all(company["company_name"] != "Transient" for company in account_only["companies"])
+    assert with_transient["top3_company_revenue_share"] <= 1.0
+    assert account_only["top3_company_revenue_share"] <= 1.0
+
+
+def test_additional_semantic_tool_names_are_safe_and_specific():
+    assert [tool.name for tool in ADDITIONAL_SEMANTIC_TOOLS] == [
+        "get_room_type_adr",
+        "get_cancellation_summary",
+        "get_monthly_otb_trend",
+        "get_corporate_share",
+        "get_company_concentration",
+    ]

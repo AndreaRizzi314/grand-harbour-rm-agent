@@ -8,7 +8,7 @@
    - `vw_stay_night_history`: all stay rows plus stay-date-effective macro group
    - `vw_stay_night_base`: posted, non-cancelled default OTB universe
    - `vw_segment_stay_night`: current segment-analysis surface
-4. `src/otel_rm/tools/required.py` exposes the five required tools with grain-safe SQL.
+4. `src/otel_rm/tools/required.py` exposes the five required tools with grain-safe SQL plus additive semantic tools for room-type ADR, cancellation analysis, monthly OTB trend, corporate share, and company concentration.
 5. `src/otel_rm/agent/factory.py` builds a Deep Agent with:
    - revenue-manager system prompt
    - filesystem-backed skills from `/skills`
@@ -34,4 +34,3 @@
 - HITL: `get_as_of_otb` is explicitly gated through `interrupt_on={"get_as_of_otb": True}`.
 - Memory/filesystem: Deep Agents loads `/memory/AGENTS.md`, stores thread state with a checkpointer, and uses a filesystem backend so skills are loaded progressively rather than stuffed into one prompt.
 - No raw SQL tool: the model only receives the five business tools; SQL stays inside application code.
-

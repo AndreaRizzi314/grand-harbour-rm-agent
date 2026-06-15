@@ -13,8 +13,11 @@ from langgraph.store.memory import InMemoryStore
 
 from otel_rm.config import get_settings
 from otel_rm.tools.required import (
+    AGENT_TOOLS,
     REQUIRED_TOOLS,
     block_vs_transient_mix_tool,
+    company_concentration_tool,
+    corporate_share_tool,
     segment_mix_tool,
 )
 
@@ -42,8 +45,10 @@ stay rows are not reservations, room nights are sum(number_of_spaces), and defau
 OTB excludes Cancelled and Provisional rows unless the user explicitly asks for them.
 
 Prefer the domain tools over filesystem operations. For segment or mix work, delegate
-to the segment specialist subagent. If a question needs point-in-time OTB, explain
-the historical caveat and wait for the human approval gate before proceeding.
+to the segment specialist subagent. Use the extra semantic tools for cancellation,
+room-type ADR, monthly trend, corporate-share, and company-concentration questions.
+If a question needs point-in-time OTB, explain the historical caveat and wait for
+the human approval gate before proceeding.
 """
 
 
@@ -67,15 +72,21 @@ def build_segment_subagent() -> dict:
         "name": "segment-analyst",
         "description": (
             "Handles segment-mix, OTA dependency, macro-group, and block-versus-"
-            "transient questions using only the segment tools."
+            "transient questions using only the segment/concentration tools."
         ),
         "system_prompt": (
             "You are a focused segment analyst. Use get_segment_mix and "
-            "get_block_vs_transient_mix to answer mix questions, cite the segment "
-            "shares, and recommend concrete revenue actions when concentration risk "
-            "is elevated."
+            "get_block_vs_transient_mix to answer mix questions; use "
+            "get_corporate_share and get_company_concentration for corporate-share "
+            "or account-concentration questions. Cite shares and recommend concrete "
+            "revenue actions when concentration risk is elevated."
         ),
-        "tools": [segment_mix_tool, block_vs_transient_mix_tool],
+        "tools": [
+            segment_mix_tool,
+            block_vs_transient_mix_tool,
+            corporate_share_tool,
+            company_concentration_tool,
+        ],
         "skills": ["/skills"],
     }
 
@@ -120,7 +131,7 @@ def create_revenue_manager_agent(model: object | None = None) -> RevenueManagerA
 
     agent = create_deep_agent(
         model=resolved_model,
-        tools=REQUIRED_TOOLS,
+        tools=AGENT_TOOLS,
         system_prompt=SYSTEM_PROMPT,
         subagents=subagents,
         skills=["/skills"],

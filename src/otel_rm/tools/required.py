@@ -386,11 +386,344 @@ def get_block_vs_transient_mix(stay_month: str) -> dict:
     }
 
 
+def get_room_type_adr(stay_month: str) -> dict:
+    """
+    Room-type ADR ranking for a calendar stay month.
+
+    Grain: each room-type row aggregates posted, non-cancelled stay-date rows from
+    `vw_stay_night_base`. ADR is room revenue divided by room nights, not row count.
+    """
+    start, end = month_bounds(stay_month)
+    with connection_cursor() as cur:
+        cur.execute(
+            """
+            select
+              space_type as room_type,
+              count(*) as row_count,
+              count(distinct reservation_id) as reservation_count,
+              coalesce(sum(number_of_spaces), 0) as room_nights,
+              coalesce(sum(daily_room_revenue_before_tax), 0)::numeric(14, 2) as room_revenue,
+              case
+                when coalesce(sum(number_of_spaces), 0) = 0 then 0
+                else coalesce(sum(daily_room_revenue_before_tax), 0)::numeric
+                  / sum(number_of_spaces)
+              end as adr
+            from public.vw_stay_night_base
+            where stay_date >= %s
+              and stay_date < %s
+            group by space_type
+            order by adr desc, room_revenue desc, space_type
+            """,
+            (start, end),
+        )
+        rows = cur.fetchall()
+
+    room_types = [
+        {
+            "room_type": row["room_type"],
+            "row_count": int(row["row_count"]),
+            "reservation_count": int(row["reservation_count"]),
+            "room_nights": int(row["room_nights"]),
+            "room_revenue": scalar_float(row["room_revenue"]),
+            "adr": scalar_float(row["adr"]),
+        }
+        for row in rows
+    ]
+    return {
+        "stay_month": stay_month,
+        "room_types": room_types,
+        "highest_adr_room_type": room_types[0] if room_types else None,
+        "grain": "Room-type rows aggregate posted, non-cancelled stay-date rows; ADR = room revenue / room nights.",
+    }
+
+
+def get_cancellation_summary(stay_month: str, date_basis: str = "stay_date") -> dict:
+    """
+    Cancelled-business summary for a calendar month.
+
+    Grain: cancelled rows are stay-date rows from `vw_stay_night_history`.
+    `date_basis='stay_date'` answers cancelled stays for the month; `date_basis=
+    'cancellation_date'` answers cancellation activity during the month.
+    """
+    if date_basis not in {"stay_date", "cancellation_date"}:
+        raise ValueError("date_basis must be 'stay_date' or 'cancellation_date'")
+
+    start, end = month_bounds(stay_month)
+    date_filter = "stay_date >= %s and stay_date < %s"
+    if date_basis == "cancellation_date":
+        date_filter = "cancellation_datetime >= %s::date and cancellation_datetime < %s::date"
+
+    with connection_cursor() as cur:
+        cur.execute(
+            f"""
+            with cancelled as (
+              select *
+              from public.vw_stay_night_history
+              where reservation_status = 'Cancelled'
+                and {date_filter}
+            )
+            select
+              count(*) as row_count,
+              count(distinct reservation_id) as reservation_count,
+              coalesce(sum(number_of_spaces), 0) as room_nights,
+              coalesce(sum(daily_room_revenue_before_tax), 0)::numeric(14, 2) as room_revenue,
+              coalesce(sum(daily_total_revenue_before_tax), 0)::numeric(14, 2) as total_revenue
+            from cancelled
+            """,
+            (start, end),
+        )
+        summary = cur.fetchone()
+
+        cur.execute(
+            f"""
+            with cancelled as (
+              select *
+              from public.vw_stay_night_history
+              where reservation_status = 'Cancelled'
+                and {date_filter}
+            )
+            select
+              market_code,
+              market_name,
+              effective_macro_group as macro_group,
+              count(distinct reservation_id) as reservation_count,
+              coalesce(sum(number_of_spaces), 0) as room_nights,
+              coalesce(sum(daily_total_revenue_before_tax), 0)::numeric(14, 2) as total_revenue
+            from cancelled
+            group by market_code, market_name, effective_macro_group
+            order by total_revenue desc, room_nights desc, market_code
+            """,
+            (start, end),
+        )
+        by_segment = cur.fetchall()
+
+    assert summary is not None
+    return {
+        "stay_month": stay_month,
+        "date_basis": date_basis,
+        "row_count": int(summary["row_count"]),
+        "reservation_count": int(summary["reservation_count"]),
+        "room_nights": int(summary["room_nights"]),
+        "room_revenue": scalar_float(summary["room_revenue"]),
+        "total_revenue": scalar_float(summary["total_revenue"]),
+        "by_segment": [
+            {
+                "market_code": row["market_code"],
+                "market_name": row["market_name"],
+                "macro_group": row["macro_group"],
+                "reservation_count": int(row["reservation_count"]),
+                "room_nights": int(row["room_nights"]),
+                "total_revenue": scalar_float(row["total_revenue"]),
+            }
+            for row in by_segment
+        ],
+        "grain": (
+            "Cancelled stay-date rows when date_basis='stay_date'; cancellation "
+            "activity rows when date_basis='cancellation_date'."
+        ),
+    }
+
+
+def get_monthly_otb_trend(start_month: str, end_month: str) -> dict:
+    """
+    Month-by-month OTB trend for an inclusive month range.
+
+    Grain: each month aggregates posted, non-cancelled stay-date rows from
+    `vw_stay_night_base`, with room nights as `sum(number_of_spaces)`.
+    """
+    start, _ = month_bounds(start_month)
+    _, end = month_bounds(end_month)
+    with connection_cursor() as cur:
+        cur.execute(
+            """
+            with months as (
+              select generate_series(%s::date, (%s::date - interval '1 month')::date, interval '1 month')::date as month_start
+            )
+            select
+              to_char(months.month_start, 'YYYY-MM') as stay_month,
+              count(base.*) as row_count,
+              count(distinct base.reservation_id) as reservation_count,
+              coalesce(sum(base.number_of_spaces), 0) as room_nights,
+              coalesce(sum(base.daily_room_revenue_before_tax), 0)::numeric(14, 2) as room_revenue,
+              coalesce(sum(base.daily_total_revenue_before_tax), 0)::numeric(14, 2) as total_revenue
+            from months
+            left join public.vw_stay_night_base base
+              on base.stay_date >= months.month_start
+             and base.stay_date < months.month_start + interval '1 month'
+            group by months.month_start
+            order by months.month_start
+            """,
+            (start, end),
+        )
+        rows = cur.fetchall()
+
+    return {
+        "start_month": start_month,
+        "end_month": end_month,
+        "months": [
+            {
+                "stay_month": row["stay_month"],
+                "row_count": int(row["row_count"]),
+                "reservation_count": int(row["reservation_count"]),
+                "room_nights": int(row["room_nights"]),
+                "room_revenue": scalar_float(row["room_revenue"]),
+                "total_revenue": scalar_float(row["total_revenue"]),
+            }
+            for row in rows
+        ],
+        "grain": "Each month aggregates posted, non-cancelled stay-date rows from vw_stay_night_base.",
+    }
+
+
+def get_corporate_share(start_month: str, end_month: str, include_mice_groups: bool = False) -> dict:
+    """
+    Corporate share of future or selected stay months.
+
+    Grain: the denominator is all posted, non-cancelled stay-date rows in the
+    inclusive month range. By default, Corporate means effective macro group
+    `Corporate`; set `include_mice_groups=True` to include corporate group blocks.
+    """
+    start, _ = month_bounds(start_month)
+    _, end = month_bounds(end_month)
+    corporate_filter = "effective_macro_group = 'Corporate'"
+    if include_mice_groups:
+        corporate_filter = "(effective_macro_group = 'Corporate' or market_code = 'CGR')"
+
+    with connection_cursor() as cur:
+        cur.execute(
+            f"""
+            with scoped as (
+              select *
+              from public.vw_segment_stay_night
+              where stay_date >= %s
+                and stay_date < %s
+            )
+            select
+              count(*) as row_count,
+              count(distinct reservation_id) as reservation_count,
+              coalesce(sum(number_of_spaces), 0) as room_nights,
+              coalesce(sum(daily_total_revenue_before_tax), 0)::numeric(14, 2) as total_revenue,
+              count(*) filter (where {corporate_filter}) as corporate_row_count,
+              count(distinct reservation_id) filter (where {corporate_filter}) as corporate_reservation_count,
+              coalesce(sum(number_of_spaces) filter (where {corporate_filter}), 0) as corporate_room_nights,
+              coalesce(sum(daily_total_revenue_before_tax) filter (where {corporate_filter}), 0)::numeric(14, 2) as corporate_total_revenue
+            from scoped
+            """,
+            (start, end),
+        )
+        row = cur.fetchone()
+
+    assert row is not None
+    room_nights = int(row["room_nights"])
+    total_revenue = scalar_float(row["total_revenue"])
+    corporate_room_nights = int(row["corporate_room_nights"])
+    corporate_total_revenue = scalar_float(row["corporate_total_revenue"])
+    return {
+        "start_month": start_month,
+        "end_month": end_month,
+        "include_mice_groups": include_mice_groups,
+        "denominator": {
+            "row_count": int(row["row_count"]),
+            "reservation_count": int(row["reservation_count"]),
+            "room_nights": room_nights,
+            "total_revenue": total_revenue,
+        },
+        "corporate": {
+            "row_count": int(row["corporate_row_count"]),
+            "reservation_count": int(row["corporate_reservation_count"]),
+            "room_nights": corporate_room_nights,
+            "total_revenue": corporate_total_revenue,
+            "share_of_room_nights": corporate_room_nights / room_nights if room_nights else 0.0,
+            "share_of_revenue": corporate_total_revenue / total_revenue if total_revenue else 0.0,
+        },
+        "grain": "Shares use stay-date rows from vw_segment_stay_night across the inclusive month range.",
+    }
+
+
+def get_company_concentration(stay_month: str, include_transient: bool = True) -> dict:
+    """
+    Company revenue concentration for a stay month.
+
+    Grain: company rows aggregate posted, non-cancelled stay-date rows. Transient
+    rows can be included as a named bucket or excluded for account-only ranking.
+    """
+    start, end = month_bounds(stay_month)
+    transient_filter = ""
+    if not include_transient:
+        transient_filter = "and company_name is not null"
+
+    with connection_cursor() as cur:
+        cur.execute(
+            f"""
+            with scoped as (
+              select *
+              from public.vw_stay_night_base
+              where stay_date >= %s
+                and stay_date < %s
+                {transient_filter}
+            ),
+            totals as (
+              select
+                coalesce(sum(number_of_spaces), 0) as total_room_nights,
+                coalesce(sum(daily_total_revenue_before_tax), 0)::numeric(14, 2) as total_revenue
+              from scoped
+            )
+            select
+              coalesce(scoped.company_name, 'Transient') as company_name,
+              coalesce(sum(scoped.number_of_spaces), 0) as room_nights,
+              coalesce(sum(scoped.daily_total_revenue_before_tax), 0)::numeric(14, 2) as total_revenue,
+              case
+                when totals.total_revenue = 0 then 0
+                else sum(scoped.daily_total_revenue_before_tax)::numeric / totals.total_revenue
+              end as share_of_revenue,
+              totals.total_room_nights as denominator_room_nights,
+              totals.total_revenue as denominator_total_revenue
+            from scoped
+            cross join totals
+            group by company_name, denominator_room_nights, denominator_total_revenue
+            order by total_revenue desc, room_nights desc, company_name
+            limit 10
+            """,
+            (start, end),
+        )
+        rows = cur.fetchall()
+
+    denominator = {
+        "room_nights": int(rows[0]["denominator_room_nights"]) if rows else 0,
+        "total_revenue": scalar_float(rows[0]["denominator_total_revenue"]) if rows else 0.0,
+    }
+    companies = [
+        {
+            "company_name": row["company_name"],
+            "room_nights": int(row["room_nights"]),
+            "total_revenue": scalar_float(row["total_revenue"]),
+            "share_of_revenue": scalar_float(row["share_of_revenue"]),
+        }
+        for row in rows
+    ]
+    top3_revenue = sum(company["total_revenue"] for company in companies[:3])
+    return {
+        "stay_month": stay_month,
+        "include_transient": include_transient,
+        "denominator": denominator,
+        "companies": companies,
+        "top3_company_revenue_share": (
+            top3_revenue / denominator["total_revenue"] if denominator["total_revenue"] else 0.0
+        ),
+        "grain": "Company rows aggregate posted, non-cancelled stay-date rows from vw_stay_night_base.",
+    }
+
+
 otb_summary_tool = tool(get_otb_summary)
 segment_mix_tool = tool(get_segment_mix)
 pickup_delta_tool = tool(get_pickup_delta)
 as_of_otb_tool = tool(get_as_of_otb)
 block_vs_transient_mix_tool = tool(get_block_vs_transient_mix)
+room_type_adr_tool = tool(get_room_type_adr)
+cancellation_summary_tool = tool(get_cancellation_summary)
+monthly_otb_trend_tool = tool(get_monthly_otb_trend)
+corporate_share_tool = tool(get_corporate_share)
+company_concentration_tool = tool(get_company_concentration)
 
 
 REQUIRED_TOOLS = [
@@ -400,3 +733,13 @@ REQUIRED_TOOLS = [
     as_of_otb_tool,
     block_vs_transient_mix_tool,
 ]
+
+ADDITIONAL_SEMANTIC_TOOLS = [
+    room_type_adr_tool,
+    cancellation_summary_tool,
+    monthly_otb_trend_tool,
+    corporate_share_tool,
+    company_concentration_tool,
+]
+
+AGENT_TOOLS = REQUIRED_TOOLS + ADDITIONAL_SEMANTIC_TOOLS

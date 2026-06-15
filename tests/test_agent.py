@@ -30,9 +30,11 @@ def test_segment_work_is_isolated_to_subagent():
     bundle = create_revenue_manager_agent()
     subagent = bundle.subagents[0]
     assert subagent["name"] == "segment-analyst"
-    assert {tool.name for tool in subagent["tools"]} == {
+    assert {tool.name for tool in subagent["tools"]} >= {
         "get_segment_mix",
         "get_block_vs_transient_mix",
+        "get_corporate_share",
+        "get_company_concentration",
     }
 
 

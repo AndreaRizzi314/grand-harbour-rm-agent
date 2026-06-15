@@ -6,3 +6,6 @@ Pickup windows use `create_datetime` and start at Europe/London local midnight f
 
 Effective macro group is the stay-date-aware segment label from `market_macro_group_history`; it can differ from the static `market_code_lookup.macro_group` when a market changes classification over time, such as `PROM` shifting from `Retail` to `Leisure Group` effective `2025-06-01`.
 
+Room-type ADR is `sum(daily_room_revenue_before_tax) / sum(number_of_spaces)` by `space_type` over posted, non-cancelled stay-date rows. Cancelled-business views must state whether the month is filtered by `stay_date` (cancelled stays for that month) or `cancellation_datetime` (cancellation activity during that month).
+
+Company concentration ranks posted, non-cancelled stay-date rows by `company_name`, with `Transient` shown as an explicit bucket unless the user asks for account-only concentration. Corporate share defaults to effective macro group `Corporate`; corporate group blocks can be included explicitly with a separate flag.

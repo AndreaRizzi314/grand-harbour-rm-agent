@@ -27,7 +27,7 @@ Standalone solution repository for the OTel AI Build Challenge. This repository 
 ## Repo structure
 
 - `src/otel_rm/etl`: scraper, models, load logic
-- `src/otel_rm/tools`: required tool layer
+- `src/otel_rm/tools`: required tool layer plus semantic helpers for room-type ADR, cancellations, OTB trend, corporate share, and company concentration
 - `src/otel_rm/agent`: Deep Agents factory and health payload
 - `skills/`: on-demand skill pack
 - `memory/AGENTS.md`: long-term operating memory
