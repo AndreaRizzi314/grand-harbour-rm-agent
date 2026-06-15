@@ -16,7 +16,7 @@ from otel_rm.agent.health import current_health_payload
 from otel_rm.config import get_settings
 
 
-ROOT = Path(__file__).resolve().parents[2]
+PACKAGE_ROOT = Path(__file__).resolve().parent
 security = HTTPBasic()
 app = FastAPI(title="Grand Harbour Revenue Manager Agent")
 
@@ -47,7 +47,7 @@ def health(_: str = Depends(require_basic_auth)) -> dict[str, object]:
 
 @app.get("/", response_class=HTMLResponse)
 def index(_: str = Depends(require_basic_auth)) -> str:
-    return (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    return (PACKAGE_ROOT / "web" / "index.html").read_text(encoding="utf-8")
 
 
 @app.get("/api/chat/stream")

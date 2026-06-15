@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grand Harbour Revenue Manager</title>
+    <style>
+      :root {
+        --bg: #f4efe7;
+        --panel: rgba(255, 250, 242, 0.92);
+        --ink: #1f2a2e;
+        --muted: #58646a;
+        --accent: #0c7c6b;
+        --accent-soft: #d8efe8;
+        --border: rgba(31, 42, 46, 0.12);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #ffe2bf 0, transparent 35%),
+          radial-gradient(circle at bottom right, #cde8df 0, transparent 32%),
+          var(--bg);
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 18px 60px rgba(31, 42, 46, 0.08);
+      }
+      .hero-copy { padding: 28px; }
+      h1 {
+        font-family: "IBM Plex Serif", Georgia, serif;
+        font-size: clamp(2.4rem, 5vw, 4rem);
+        line-height: 0.95;
+        margin: 0 0 14px;
+      }
+      p { line-height: 1.5; color: var(--muted); }
+      .stats {
+        padding: 24px;
+        display: grid;
+        gap: 12px;
+      }
+      .stat {
+        padding: 16px;
+        border-radius: 16px;
+        background: white;
+        border: 1px solid var(--border);
+      }
+      .stat strong { display: block; font-size: 1.3rem; }
+      .chat-shell {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 20px;
+      }
+      .chat, .events { padding: 22px; }
+      .messages, .event-log {
+        min-height: 380px;
+        max-height: 560px;
+        overflow: auto;
+        padding: 14px;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+      }
+      .msg {
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        border-radius: 14px;
+      }
+      .user { background: #eef5f2; }
+      .assistant { background: #f8f1e6; }
+      form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        margin-top: 14px;
+      }
+      input, button {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        font: inherit;
+      }
+      input { padding: 14px 16px; background: white; }
+      button {
+        padding: 14px 18px;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+      }
+      pre {
+        margin: 0 0 10px;
+        padding: 10px;
+        white-space: pre-wrap;
+        border-radius: 12px;
+        background: var(--accent-soft);
+        font-size: 0.82rem;
+      }
+      @media (max-width: 860px) {
+        .hero, .chat-shell { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="card hero-copy">
+          <p>Grand Harbour Hotel</p>
+          <h1>Revenue manager judgment, not dashboard recitation.</h1>
+          <p>
+            Ask about OTB, pickup, OTA exposure, block concentration, or historical
+            snapshots. The agent streams back its tool and skill activity so you can
+            see how the answer is built.
+          </p>
+        </div>
+        <div class="card stats">
+          <div class="stat"><strong id="health-status">Loading…</strong><span>Health</span></div>
+          <div class="stat"><strong id="dataset-revision">—</strong><span>Dataset revision</span></div>
+          <div class="stat"><strong id="posted-rows">—</strong><span>Posted OTB rows</span></div>
+        </div>
+      </section>
+
+      <section class="chat-shell">
+        <div class="card chat">
+          <h2>Chat</h2>
+          <div class="messages" id="messages"></div>
+          <form id="chat-form">
+            <input id="question" name="question" placeholder="What's driving July and how did we book lately?" />
+            <button type="submit">Ask</button>
+          </form>
+        </div>
+        <div class="card events">
+          <h2>Live Events</h2>
+          <div class="event-log" id="event-log"></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const messagesEl = document.getElementById("messages");
+      const eventLogEl = document.getElementById("event-log");
+      const formEl = document.getElementById("chat-form");
+      const questionEl = document.getElementById("question");
+      const threadId = crypto.randomUUID();
+
+      async function loadHealth() {
+        const response = await fetch("/health");
+        const data = await response.json();
+        document.getElementById("health-status").textContent = data.status ?? "unknown";
+        document.getElementById("dataset-revision").textContent = data.dataset_revision ?? "—";
+        document.getElementById("posted-rows").textContent = data.financial_status_posted_only_rows ?? "—";
+      }
+
+      function addMessage(kind, text) {
+        const node = document.createElement("div");
+        node.className = `msg ${kind}`;
+        node.textContent = text;
+        messagesEl.appendChild(node);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return node;
+      }
+
+      function addEvent(name, payload) {
+        const block = document.createElement("pre");
+        block.textContent = `${name}\n${payload}`;
+        eventLogEl.appendChild(block);
+        eventLogEl.scrollTop = eventLogEl.scrollHeight;
+      }
+
+      formEl.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const question = questionEl.value.trim();
+        if (!question) return;
+        addMessage("user", question);
+        const assistantNode = addMessage("assistant", "Thinking…");
+        eventLogEl.innerHTML = "";
+
+        const streamUrl = `/api/chat/stream?q=${encodeURIComponent(question)}&thread_id=${encodeURIComponent(threadId)}`;
+        const source = new EventSource(streamUrl);
+        let finalText = "";
+
+        source.onmessage = (evt) => addEvent("message", evt.data);
+        source.addEventListener("on_chat_model_end", (evt) => {
+          try {
+            const payload = JSON.parse(evt.data);
+            const content = payload?.data?.output?.content ?? [];
+            const text = content.map((item) => item.text || "").join("");
+            if (text) {
+              finalText = text;
+              assistantNode.textContent = text;
+            }
+          } catch (err) {
+            addEvent("parse-error", String(err));
+          }
+        });
+        source.addEventListener("error", (evt) => {
+          addEvent("error", evt.data || "stream error");
+          source.close();
+          if (!finalText) {
+            assistantNode.textContent = "The agent could not complete the request. Check API key or server logs.";
+          }
+        });
+        source.addEventListener("on_tool_end", (evt) => addEvent("tool", evt.data));
+        source.addEventListener("on_tool_start", (evt) => addEvent("tool", evt.data));
+        source.addEventListener("on_chain_start", (evt) => addEvent("chain", evt.data));
+        source.addEventListener("on_chain_end", () => source.close());
+
+        questionEl.value = "";
+      });
+
+      loadHealth().catch((err) => {
+        document.getElementById("health-status").textContent = "error";
+        addEvent("health-error", String(err));
+      });
+    </script>
+  </body>
+</html>
+
