@@ -508,9 +508,9 @@
         }
       }
 
-      function money(value) {
+      function dollarAmount(value) {
         const number = Number(value ?? 0);
-        return `£${number.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+        return `$${number.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
       }
 
       function count(value) {
@@ -541,7 +541,7 @@
             tags: ["stay-date grain", "posted only", "non-cancelled"],
             metrics: [
               { label: "room nights", value: count(data.room_nights) },
-              { label: "total revenue", value: money(data.total_revenue) },
+              { label: "total revenue", value: dollarAmount(data.total_revenue) },
               { label: "reservations", value: count(data.reservation_count) },
               { label: "stay rows", value: count(data.row_count) },
             ],
@@ -556,9 +556,9 @@
             tags: (data.segments ?? []).slice(0, 5).map((row) => `${row.market_code}: ${count(row.room_nights)} RN`),
             metrics: top ? [
               { label: "top segment RN", value: count(top.room_nights) },
-              { label: "top segment revenue", value: money(top.total_revenue) },
+              { label: "top segment revenue", value: dollarAmount(top.total_revenue) },
               { label: "denominator RN", value: count(data.denominator?.room_nights) },
-              { label: "denominator revenue", value: money(data.denominator?.total_revenue) },
+              { label: "denominator revenue", value: dollarAmount(data.denominator?.total_revenue) },
             ] : [],
           };
         }
@@ -569,7 +569,7 @@
             metrics: [
               { label: "new reservations", value: count(data.new_reservations) },
               { label: "new room nights", value: count(data.new_room_nights) },
-              { label: "new total revenue", value: money(data.new_total_revenue) },
+              { label: "new total revenue", value: dollarAmount(data.new_total_revenue) },
             ],
           };
         }
@@ -580,8 +580,8 @@
             metrics: [
               { label: "block room nights", value: count(data.block_room_nights) },
               { label: "transient room nights", value: count(data.transient_room_nights) },
-              { label: "block revenue", value: money(data.block_total_revenue) },
-              { label: "transient revenue", value: money(data.transient_total_revenue) },
+              { label: "block revenue", value: dollarAmount(data.block_total_revenue) },
+              { label: "transient revenue", value: dollarAmount(data.transient_total_revenue) },
             ],
           };
         }
@@ -591,9 +591,9 @@
             detail: top ? `Highest ADR room type is ${top.room_type}.` : "No room-type rows returned.",
             tags: (data.room_types ?? []).slice(0, 4).map((row) => row.room_type),
             metrics: top ? [
-              { label: "highest ADR", value: money(top.adr) },
+              { label: "highest ADR", value: dollarAmount(top.adr) },
               { label: "room nights", value: count(top.room_nights) },
-              { label: "room revenue", value: money(top.room_revenue) },
+              { label: "room revenue", value: dollarAmount(top.room_revenue) },
             ] : [],
           };
         }
@@ -603,7 +603,7 @@
             tags: ["cancelled rows", data.date_basis],
             metrics: [
               { label: "room nights", value: count(data.room_nights) },
-              { label: "total revenue", value: money(data.total_revenue) },
+              { label: "total revenue", value: dollarAmount(data.total_revenue) },
               { label: "reservations", value: count(data.reservation_count) },
             ],
           };

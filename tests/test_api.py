@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from otel_rm.api import app
+from otel_rm.api import app, get_agent_bundle
 from otel_rm.config import get_settings
 
 
@@ -57,11 +57,30 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "show-raw" in html
     assert "What is July 2025 OTB?" not in html
     assert "How much group business do we have in July 2025?" not in html
+    assert "£" not in html
+    assert "dollarAmount" in html
+    assert "toLocaleString(\"en-US\"" in html
     assert "Readable mode" not in html
     assert "Technical payloads are hidden" not in html
     assert 'addEvent("chain"' not in html
     assert 'addEvent("tool"' not in html
 
+    get_settings.cache_clear()
+
+
+def test_agent_bundle_is_process_singleton_for_followups(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    get_settings.cache_clear()
+    get_agent_bundle.cache_clear()
+
+    first = get_agent_bundle()
+    second = get_agent_bundle()
+
+    assert first is second
+    assert first.checkpointer is second.checkpointer
+    assert first.store is second.store
+
+    get_agent_bundle.cache_clear()
     get_settings.cache_clear()
 
 

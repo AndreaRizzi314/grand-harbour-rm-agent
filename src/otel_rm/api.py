@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 import json
 from pathlib import Path
 import secrets
@@ -20,6 +21,11 @@ from otel_rm.config import get_settings
 PACKAGE_ROOT = Path(__file__).resolve().parent
 security = HTTPBasic()
 app = FastAPI(title="Grand Harbour Revenue Manager Agent")
+
+
+@lru_cache(maxsize=1)
+def get_agent_bundle():
+    return create_revenue_manager_agent()
 
 
 def is_secret_handling_request(question: str) -> bool:
@@ -137,7 +143,7 @@ async def chat_stream(
 
         return EventSourceResponse(fallback_generator())
 
-    bundle = create_revenue_manager_agent()
+    bundle = get_agent_bundle()
     agent = bundle.agent
     payload = {"messages": [{"role": "user", "content": q}]}
     config = {"configurable": {"thread_id": thread_id}}
@@ -180,7 +186,7 @@ async def chat_once(
             "messages": [{"role": "assistant", "content": model_required_message(q)}],
         }
 
-    bundle = create_revenue_manager_agent()
+    bundle = get_agent_bundle()
     agent = bundle.agent
     try:
         response = await agent.ainvoke(

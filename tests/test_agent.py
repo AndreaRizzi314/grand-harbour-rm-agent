@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from otel_rm.agent.factory import create_revenue_manager_agent
+from otel_rm.agent.factory import SYSTEM_PROMPT, create_revenue_manager_agent
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,3 +63,8 @@ def test_memory_or_filesystem_is_configured():
     assert bundle.memory_paths == ["/memory/AGENTS.md"]
     assert bundle.backend is not None
     assert bundle.store is not None
+
+
+def test_system_prompt_uses_dollars_for_submission():
+    assert "present monetary values as dollars" in SYSTEM_PROMPT
+    assert "$ symbol" in SYSTEM_PROMPT
