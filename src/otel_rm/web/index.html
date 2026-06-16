@@ -704,6 +704,15 @@
         return text.startsWith("{") ? "" : text;
       }
 
+      function extractMessageStringContent(value) {
+        if (typeof value !== "string" || !value.includes("content=")) return "";
+        const singleQuoted = value.match(/content='([\s\S]*?)'\s+(?:additional_kwargs|response_metadata|id=|name=|type=)/);
+        if (singleQuoted) return unescapeMessageText(singleQuoted[1]).trim();
+        const doubleQuoted = value.match(/content="([\s\S]*?)"\s+(?:additional_kwargs|response_metadata|id=|name=|type=)/);
+        if (doubleQuoted) return unescapeMessageText(doubleQuoted[1]).trim();
+        return "";
+      }
+
       function collectAssistantText(value, candidates = []) {
         if (!value) return candidates;
         if (typeof value === "string") {
@@ -734,12 +743,22 @@
       }
 
       function messageRole(message) {
-        const rawRole = (message?.role ?? message?.type ?? "").toLowerCase();
+        if (typeof message === "string") {
+          if (message.includes("HumanMessage") || message.includes("type='human'") || message.includes('type="human"')) return "user";
+          if (message.includes("AIMessage") || message.includes("name='otel-rm-agent'") || message.includes('name="otel-rm-agent"') || message.includes("type='ai'") || message.includes('type="ai"')) return "assistant";
+          return "";
+        }
+        const rawRole = (message?.role ?? message?.type ?? message?.kwargs?.type ?? "").toLowerCase();
         if (rawRole === "human") return "user";
         if (rawRole === "ai") return "assistant";
         if (rawRole) return rawRole;
         if (message?.name === "otel-rm-agent") return "assistant";
         return "";
+      }
+
+      function messageText(message) {
+        if (typeof message === "string") return extractMessageStringContent(message);
+        return contentToText(message?.content ?? message?.kwargs?.content ?? "");
       }
 
       function extractCurrentTurnAssistantText(output, currentQuestion) {
@@ -750,7 +769,7 @@
         let currentTurnStart = -1;
         messages.forEach((message, index) => {
           const role = messageRole(message);
-          const text = contentToText(message?.content);
+          const text = messageText(message);
           if (role === "user" && text === normalizedQuestion) {
             currentTurnStart = index;
           }
@@ -759,7 +778,7 @@
 
         const answers = messages.slice(currentTurnStart + 1)
           .filter((message) => messageRole(message) === "assistant")
-          .map((message) => contentToText(message.content))
+          .map((message) => messageText(message))
           .filter((text) => text && !text.startsWith("{"));
         return answers.at(-1) ?? "";
       }
