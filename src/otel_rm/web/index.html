@@ -30,7 +30,7 @@
           var(--bg);
       }
       main {
-        max-width: 1380px;
+        max-width: 1640px;
         margin: 0 auto;
         padding: 32px 20px 48px;
       }
@@ -69,7 +69,7 @@
       .stat strong { display: block; font-size: 1.3rem; }
       .chat-shell {
         display: grid;
-        grid-template-columns: minmax(620px, 1.65fr) minmax(360px, 0.85fr);
+        grid-template-columns: minmax(780px, 2.15fr) minmax(340px, 0.75fr);
         gap: 24px;
         align-items: start;
       }
@@ -84,7 +84,7 @@
         border-radius: 18px;
       }
       .msg {
-        max-width: 94%;
+        max-width: 98%;
         padding: 14px 16px;
         margin-bottom: 14px;
         border-radius: 18px;
@@ -439,7 +439,7 @@
           const parsed = typeof payload === "string" ? JSON.parse(payload) : payload;
           addStructuredEvent(name, parsed);
         } catch {
-          addTrace("error", name, String(payload), payload);
+          addTrace("thinking", "Stream event received", "A technical stream event was received. Enable raw output to inspect it.", payload);
         }
       }
 
@@ -494,7 +494,8 @@
         return calls;
       }
 
-      function summarizeToolOutput(payload) {
+      function summarizeToolOutput(eventName, payload) {
+        if (eventName !== "on_tool_end") return false;
         const toolName = payload?.name;
         const output = payload?.data?.output ?? payload?.data?.input;
         if (!toolName || !String(toolName).startsWith("get_")) return false;
@@ -523,18 +524,22 @@
       }
 
       function summarizeToolInput(name, args) {
-        if (!args || typeof args !== "object") return compact(args);
+        if (!args || typeof args !== "object") return "Tool parameters received.";
         if (args.stay_month) return `Stay month: ${args.stay_month}`;
         if (args.booking_window_days) {
           return `Pickup window: ${args.booking_window_days} days; future stays from ${args.future_stay_from ?? "not specified"}`;
         }
         if (args.start_month && args.end_month) return `Months: ${args.start_month} to ${args.end_month}`;
-        return compact(args);
+        return "Custom tool parameters received. Enable raw output to inspect exact arguments.";
       }
 
       function summarizeToolResult(name, data) {
         if (!data || typeof data !== "object") {
-          return { detail: compact(data), tags: [], metrics: [] };
+          return {
+            detail: "The tool returned a result. Enable raw output to inspect the technical payload.",
+            tags: [],
+            metrics: [],
+          };
         }
         if (name === "get_otb_summary") {
           return {
@@ -610,7 +615,7 @@
           };
         }
         return {
-          detail: compact(data),
+          detail: "The tool returned structured data. Enable raw output to inspect the full technical payload.",
           tags: [],
           metrics: [],
         };
@@ -618,7 +623,7 @@
 
       function addStructuredEvent(name, payload) {
         if (describeSkillEvent(payload)) return;
-        if (summarizeToolOutput(payload)) return;
+        if (summarizeToolOutput(name, payload)) return;
         if (describeToolCalls(payload)) return;
 
         if (name === "on_chain_start" && payload?.name === "otel-rm-agent") {
@@ -632,22 +637,19 @@
         if (name === "on_chat_model_end") {
           const text = extractAssistantText(payload);
           if (text) {
-            addTrace("answer", "Drafted final response", text, payload);
+            addTrace("answer", "Final answer ready", "The agent drafted the response now shown in the chat panel.", payload);
             return;
           }
         }
         if (name === "error") {
-          addTrace("error", "Stream error", compact(payload), payload);
+          addTrace("error", "Stream error", "The stream reported an error. Enable raw output for technical details.", payload);
           return;
         }
         if (payload?.name?.includes("Middleware")) {
-          const readable = payload.name
-            .replace("Middleware", " middleware")
-            .replaceAll(".", " ");
-          addTrace("thinking", readable, compact(payload?.data ?? ""), payload);
+          // Middleware events are intentionally hidden in readable mode.
+          // The raw output toggle is available for debugging those internals.
           return;
         }
-        addTrace("thinking", name, compact(payload?.data ?? payload), payload);
       }
 
       function unescapeMessageText(text) {
