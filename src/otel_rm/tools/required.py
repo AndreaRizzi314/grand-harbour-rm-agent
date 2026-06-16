@@ -12,7 +12,17 @@ LONDON = ZoneInfo("Europe/London")
 
 
 def month_bounds(stay_month: str) -> tuple[str, str]:
-    start = datetime.strptime(stay_month, "%Y-%m").date()
+    try:
+        year_text, month_text = stay_month.split("-", maxsplit=1)
+        year = int(year_text)
+        month = int(month_text)
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError("stay_month must be a valid YYYY-MM value, for example 2025-07.") from exc
+
+    if len(stay_month) != 7 or len(year_text) != 4 or len(month_text) != 2 or not 1 <= month <= 12:
+        raise ValueError("stay_month must be a valid YYYY-MM value with month 01-12, for example 2025-07.")
+
+    start = datetime(year, month, 1).date()
     if start.month == 12:
         end = start.replace(year=start.year + 1, month=1)
     else:

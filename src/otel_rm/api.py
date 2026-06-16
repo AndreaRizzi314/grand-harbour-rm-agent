@@ -139,6 +139,15 @@ async def chat_once(
         return {
             "status": "agent_error",
             "thread_id": thread_id,
-            "messages": [{"role": "assistant", "content": f"The agent runtime failed: {exc}"}],
+            "messages": [
+                {
+                    "role": "assistant",
+                    "content": (
+                        "I could not complete that request safely. Please check that any stay month "
+                        "uses YYYY-MM with a valid month 01-12, for example 2025-07. "
+                        f"Runtime detail: {exc}"
+                    ),
+                }
+            ],
         }
     return jsonable_encoder(response)

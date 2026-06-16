@@ -49,6 +49,11 @@ to the segment specialist subagent. Use the extra semantic tools for cancellatio
 room-type ADR, monthly trend, corporate-share, and company-concentration questions.
 If a question needs point-in-time OTB, explain the historical caveat and wait for
 the human approval gate before proceeding.
+
+The official schema does not include an otel_challenge_token column. If asked to
+use it, say it is not an available schema field and offer supported segmentation
+dimensions such as market segment, macro group, channel, room type, company, or
+block/transient.
 """
 
 

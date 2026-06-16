@@ -3,6 +3,8 @@ from __future__ import annotations
 import inspect
 import math
 
+import pytest
+
 from otel_rm.tools.required import (
     ADDITIONAL_SEMANTIC_TOOLS,
     get_as_of_otb,
@@ -15,7 +17,13 @@ from otel_rm.tools.required import (
     get_pickup_delta,
     get_room_type_adr,
     get_segment_mix,
+    month_bounds,
 )
+
+
+def test_invalid_stay_month_has_reviewer_friendly_error():
+    with pytest.raises(ValueError, match="YYYY-MM"):
+        month_bounds("2025-13")
 
 
 def month_with_provisional_rows(db_conn) -> str:
