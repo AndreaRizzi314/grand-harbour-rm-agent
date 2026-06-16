@@ -622,26 +622,27 @@
       }
 
       function addStructuredEvent(name, payload) {
+        const eventName = payload?.event ?? name;
         if (describeSkillEvent(payload)) return;
-        if (summarizeToolOutput(name, payload)) return;
+        if (summarizeToolOutput(eventName, payload)) return;
         if (describeToolCalls(payload)) return;
 
-        if (name === "on_chain_start" && payload?.name === "otel-rm-agent") {
+        if (eventName === "on_chain_start" && payload?.name === "otel-rm-agent") {
           addTrace("thinking", "Agent started", "Planning the revenue-management answer and selecting relevant skills/tools.", payload);
           return;
         }
-        if (name === "on_chain_end" && isRootAgentEnd(payload)) {
+        if (eventName === "on_chain_end" && isRootAgentEnd(payload)) {
           addTrace("answer", "Agent finished", "Final answer delivered.", payload);
           return;
         }
-        if (name === "on_chat_model_end") {
+        if (eventName === "on_chat_model_end") {
           const text = extractAssistantText(payload);
           if (text) {
             addTrace("answer", "Final answer ready", "The agent drafted the response now shown in the chat panel.", payload);
             return;
           }
         }
-        if (name === "error") {
+        if (eventName === "error") {
           addTrace("error", "Stream error", "The stream reported an error. Enable raw output for technical details.", payload);
           return;
         }
@@ -752,10 +753,10 @@
             assistantNode.textContent = "The agent could not complete the request. Check API key or server logs.";
           }
         });
-        source.addEventListener("on_tool_end", (evt) => addEvent("tool", evt.data));
-        source.addEventListener("on_tool_start", (evt) => addEvent("tool", evt.data));
+        source.addEventListener("on_tool_end", (evt) => addEvent("on_tool_end", evt.data));
+        source.addEventListener("on_tool_start", (evt) => addEvent("on_tool_start", evt.data));
         source.addEventListener("on_chain_start", (evt) => {
-          addEvent("chain", evt.data);
+          addEvent("on_chain_start", evt.data);
           try {
             applyAssistantText(evt);
           } catch (err) {

@@ -50,6 +50,8 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "Skills loaded" in html
     assert "Show raw JSON" in html
     assert "show-raw" in html
+    assert 'addEvent("chain"' not in html
+    assert 'addEvent("tool"' not in html
 
     get_settings.cache_clear()
 
