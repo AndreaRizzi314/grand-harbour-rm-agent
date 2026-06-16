@@ -69,6 +69,9 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "applyAssistantText(evt, true)" in html
     assert "collectAssistantText(output)" in html
     assert "collectAssistantText(payload)" not in html
+    assert "extractCurrentTurnAssistantText(output, currentQuestion)" in html
+    assert "extractAssistantText(payload, question)" in html
+    assert "finished without returning a new answer" in html
     assert "Technical payloads are hidden" not in html
     assert 'addEvent("chain"' not in html
     assert 'addEvent("tool"' not in html
@@ -88,6 +91,8 @@ def test_followup_answer_extraction_ignores_persisted_message_history(monkeypatc
     html = response.text
     assert "collectAssistantText(output)" in html
     assert "collectAssistantText(payload)" not in html
+    assert "extractCurrentTurnAssistantText(output, currentQuestion)" in html
+    assert "extractAssistantText(payload, question)" in html
 
     get_settings.cache_clear()
 

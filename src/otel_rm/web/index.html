@@ -725,7 +725,46 @@
         return candidates;
       }
 
-      function extractAssistantText(payload) {
+      function contentToText(content) {
+        if (typeof content === "string") return content.trim();
+        if (Array.isArray(content)) {
+          return content.map((item) => item?.text || item?.content || "").join("").trim();
+        }
+        return "";
+      }
+
+      function messageRole(message) {
+        const rawRole = (message?.role ?? message?.type ?? "").toLowerCase();
+        if (rawRole === "human") return "user";
+        if (rawRole === "ai") return "assistant";
+        if (rawRole) return rawRole;
+        if (message?.name === "otel-rm-agent") return "assistant";
+        return "";
+      }
+
+      function extractCurrentTurnAssistantText(output, currentQuestion) {
+        const messages = output?.messages;
+        if (!Array.isArray(messages) || !currentQuestion) return "";
+
+        const normalizedQuestion = currentQuestion.trim();
+        let currentTurnStart = -1;
+        messages.forEach((message, index) => {
+          const role = messageRole(message);
+          const text = contentToText(message?.content);
+          if (role === "user" && text === normalizedQuestion) {
+            currentTurnStart = index;
+          }
+        });
+        if (currentTurnStart < 0) return "";
+
+        const answers = messages.slice(currentTurnStart + 1)
+          .filter((message) => messageRole(message) === "assistant")
+          .map((message) => contentToText(message.content))
+          .filter((text) => text && !text.startsWith("{"));
+        return answers.at(-1) ?? "";
+      }
+
+      function extractAssistantText(payload, currentQuestion = "") {
         const output = payload?.data?.output;
         const content = output?.content ?? [];
         if (Array.isArray(content)) {
@@ -736,6 +775,9 @@
           const text = extractFromMessageString(output);
           if (text) return text;
         }
+        const currentTurnText = extractCurrentTurnAssistantText(output, currentQuestion);
+        if (currentTurnText) return currentTurnText;
+        if (currentQuestion) return "";
         const candidates = collectAssistantText(output);
         return candidates.at(-1) ?? "";
       }
@@ -765,7 +807,7 @@
           if (!allowHistorical && payload.event !== "on_chat_model_end") {
             return payload;
           }
-          const text = extractAssistantText(payload);
+          const text = extractAssistantText(payload, question);
           if (text) {
             finalText = text;
             assistantNode.textContent = text;
@@ -801,6 +843,9 @@
             if (isRootAgentEnd(payload)) {
               applyAssistantText(evt, true);
               source.close();
+              if (!finalText) {
+                assistantNode.textContent = "The agent finished without returning a new answer for this prompt.";
+              }
             }
           } catch (err) {
             addEvent("parse-error", String(err));
