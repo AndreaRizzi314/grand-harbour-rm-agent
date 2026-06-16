@@ -746,6 +746,12 @@
         if (typeof message === "string") {
           if (message.includes("HumanMessage") || message.includes("type='human'") || message.includes('type="human"')) return "user";
           if (message.includes("AIMessage") || message.includes("name='otel-rm-agent'") || message.includes('name="otel-rm-agent"') || message.includes("type='ai'") || message.includes('type="ai"')) return "assistant";
+          if (
+            message.includes("content=")
+            && !message.includes("name=")
+            && !message.includes("tool_call_id=")
+            && !message.includes("tool_calls=")
+          ) return "user";
           return "";
         }
         const rawRole = (message?.role ?? message?.type ?? message?.kwargs?.type ?? "").toLowerCase();

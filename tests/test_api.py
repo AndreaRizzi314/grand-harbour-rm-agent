@@ -75,6 +75,8 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "extractMessageStringContent" in html
     assert "HumanMessage" in html
     assert "message?.kwargs?.content" in html
+    assert "!message.includes(\"name=\")" in html
+    assert "!message.includes(\"tool_call_id=\")" in html
     assert "Technical payloads are hidden" not in html
     assert 'addEvent("chain"' not in html
     assert 'addEvent("tool"' not in html
