@@ -62,6 +62,8 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "toLocaleString(\"en-US\"" in html
     assert "allowHistorical = false" in html
     assert 'payload.event !== "on_chat_model_end"' in html
+    assert "Posted OTB rows" not in html
+    assert "posted-rows" not in html
     assert "Readable mode" not in html
     assert "isRootAgentEnd(payload)" in html
     assert "applyAssistantText(evt, true)" in html

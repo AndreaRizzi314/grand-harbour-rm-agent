@@ -268,7 +268,6 @@
         <div class="card stats">
           <div class="stat"><strong id="health-status">Loading...</strong><span>Health</span></div>
           <div class="stat"><strong id="dataset-revision">--</strong><span>Dataset revision</span></div>
-          <div class="stat"><strong id="posted-rows">--</strong><span>Posted OTB rows</span></div>
         </div>
       </section>
 
@@ -310,7 +309,6 @@
         const data = await response.json();
         document.getElementById("health-status").textContent = data.status ?? "unknown";
         document.getElementById("dataset-revision").textContent = data.dataset_revision ?? "--";
-        document.getElementById("posted-rows").textContent = data.financial_status_posted_only_rows ?? "--";
       }
 
       function addMessage(kind, text) {
