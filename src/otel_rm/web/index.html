@@ -736,7 +736,7 @@
           const text = extractFromMessageString(output);
           if (text) return text;
         }
-        const candidates = collectAssistantText(payload);
+        const candidates = collectAssistantText(output);
         return candidates.at(-1) ?? "";
       }
 

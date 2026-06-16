@@ -67,9 +67,27 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "Readable mode" not in html
     assert "isRootAgentEnd(payload)" in html
     assert "applyAssistantText(evt, true)" in html
+    assert "collectAssistantText(output)" in html
+    assert "collectAssistantText(payload)" not in html
     assert "Technical payloads are hidden" not in html
     assert 'addEvent("chain"' not in html
     assert 'addEvent("tool"' not in html
+
+    get_settings.cache_clear()
+
+
+def test_followup_answer_extraction_ignores_persisted_message_history(monkeypatch):
+    monkeypatch.setenv("BASIC_AUTH_USERNAME", "user")
+    monkeypatch.setenv("BASIC_AUTH_PASSWORD", "pass")
+    get_settings.cache_clear()
+
+    client = TestClient(app)
+    response = client.get("/", auth=("user", "pass"))
+
+    assert response.status_code == 200
+    html = response.text
+    assert "collectAssistantText(output)" in html
+    assert "collectAssistantText(payload)" not in html
 
     get_settings.cache_clear()
 
