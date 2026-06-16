@@ -22,6 +22,44 @@ security = HTTPBasic()
 app = FastAPI(title="Grand Harbour Revenue Manager Agent")
 
 
+def is_secret_handling_request(question: str) -> bool:
+    lowered = question.lower()
+    secret_terms = (
+        "database_url",
+        "openai_api_key",
+        "api key",
+        "secret",
+        "credential",
+        "password",
+        "token",
+        "environment variable",
+        "env var",
+    )
+    handling_terms = (
+        "print",
+        "show",
+        "reveal",
+        "encode",
+        "base64",
+        "decode",
+        "markdown link",
+        "format",
+        "transform",
+        "exfiltrate",
+    )
+    return any(term in lowered for term in secret_terms) and any(term in lowered for term in handling_terms)
+
+
+def secret_handling_refusal() -> str:
+    return (
+        "I can't reveal, transform, encode, format, or provide handling instructions "
+        "for secrets such as DATABASE_URL, OPENAI_API_KEY, credentials, tokens, or "
+        "environment variables. If you need to verify deployment configuration, check "
+        "Render environment variables directly and use /health to confirm the app can "
+        "reach the loaded database."
+    )
+
+
 def model_required_message(question: str) -> str:
     try:
         health_payload = current_health_payload()
@@ -85,6 +123,13 @@ async def chat_stream(
 ):
     settings = get_settings()
     thread_id = thread_id or str(uuid4())
+    if is_secret_handling_request(q):
+        async def secret_refusal_generator():
+            yield chat_model_end_event(secret_handling_refusal())
+            yield {"event": "on_chain_end", "data": json.dumps({"thread_id": thread_id})}
+
+        return EventSourceResponse(secret_refusal_generator())
+
     if not settings.openai_api_key:
         async def fallback_generator():
             yield chat_model_end_event(model_required_message(q))
@@ -121,6 +166,13 @@ async def chat_once(
 ) -> dict[str, Any]:
     settings = get_settings()
     thread_id = thread_id or str(uuid4())
+    if is_secret_handling_request(q):
+        return {
+            "status": "refused_secret_handling",
+            "thread_id": thread_id,
+            "messages": [{"role": "assistant", "content": secret_handling_refusal()}],
+        }
+
     if not settings.openai_api_key:
         return {
             "status": "model_configuration_required",
