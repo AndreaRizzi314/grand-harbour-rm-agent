@@ -10,6 +10,14 @@ def test_chat_without_openai_key_is_graceful(monkeypatch):
     monkeypatch.setenv("BASIC_AUTH_USERNAME", "user")
     monkeypatch.setenv("BASIC_AUTH_PASSWORD", "pass")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "otel_rm.api.current_health_payload",
+        lambda: {
+            "status": "ok",
+            "dataset_revision": "test",
+            "db_fingerprint": "test-fingerprint",
+        },
+    )
     get_settings.cache_clear()
 
     client = TestClient(app)
@@ -23,6 +31,23 @@ def test_chat_without_openai_key_is_graceful(monkeypatch):
     payload = response.json()
     assert payload["status"] == "model_configuration_required"
     assert "OPENAI_API_KEY is not configured" in payload["messages"][0]["content"]
+
+    get_settings.cache_clear()
+
+
+def test_homepage_exposes_readable_agent_trace(monkeypatch):
+    monkeypatch.setenv("BASIC_AUTH_USERNAME", "user")
+    monkeypatch.setenv("BASIC_AUTH_PASSWORD", "pass")
+    get_settings.cache_clear()
+
+    client = TestClient(app)
+    response = client.get("/", auth=("user", "pass"))
+
+    assert response.status_code == 200
+    html = response.text
+    assert "Agent Trace" in html
+    assert "Tool requested" in html
+    assert "Skills loaded" in html
 
     get_settings.cache_clear()
 

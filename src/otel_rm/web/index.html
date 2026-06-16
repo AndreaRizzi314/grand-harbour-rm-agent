@@ -12,6 +12,10 @@
         --muted: #58646a;
         --accent: #0c7c6b;
         --accent-soft: #d8efe8;
+        --tool: #b85f26;
+        --skill: #276f9f;
+        --answer: #0c7c6b;
+        --danger: #b3261e;
         --border: rgba(31, 42, 46, 0.12);
       }
       * { box-sizing: border-box; }
@@ -65,13 +69,14 @@
       .stat strong { display: block; font-size: 1.3rem; }
       .chat-shell {
         display: grid;
-        grid-template-columns: 1.2fr 0.8fr;
+        grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
         gap: 20px;
+        align-items: start;
       }
       .chat, .events { padding: 22px; }
       .messages, .event-log {
         min-height: 380px;
-        max-height: 560px;
+        max-height: 640px;
         overflow: auto;
         padding: 14px;
         background: white;
@@ -79,12 +84,38 @@
         border-radius: 18px;
       }
       .msg {
-        padding: 12px 14px;
-        margin-bottom: 10px;
-        border-radius: 14px;
+        max-width: 88%;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+        border-radius: 18px;
+        line-height: 1.58;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
       }
-      .user { background: #eef5f2; }
-      .assistant { background: #f8f1e6; }
+      .user {
+        margin-left: auto;
+        background: #e6f3ee;
+        border-bottom-right-radius: 6px;
+      }
+      .assistant {
+        margin-right: auto;
+        background: #fbf3e6;
+        border-bottom-left-radius: 6px;
+      }
+      .examples {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 12px 0 4px;
+      }
+      .example {
+        border: 1px solid var(--border);
+        background: #fff;
+        color: var(--ink);
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+      }
       form {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -110,6 +141,102 @@
         border-radius: 12px;
         background: var(--accent-soft);
         font-size: 0.82rem;
+      }
+      .trace-intro {
+        margin-top: -4px;
+        font-size: 0.92rem;
+      }
+      .trace-card {
+        margin-bottom: 10px;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-left: 5px solid var(--accent);
+        border-radius: 14px;
+        background: #fffaf2;
+      }
+      .trace-card.tool { border-left-color: #c46a2f; }
+      .trace-card.skill { border-left-color: #2878a7; }
+      .trace-card.answer { border-left-color: #0c7c6b; }
+      .trace-card.error { border-left-color: #b3261e; }
+      .trace-card.thinking { border-left-color: #6d7880; }
+      .trace-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+      .trace-title {
+        font-weight: 700;
+      }
+      .trace-kind {
+        display: inline-block;
+        margin-right: 6px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: #eef5f2;
+        color: var(--muted);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .trace-meta {
+        color: var(--muted);
+        font-size: 0.78rem;
+        white-space: nowrap;
+      }
+      .trace-detail {
+        color: var(--ink);
+        font-size: 0.9rem;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+      .trace-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .trace-metric {
+        padding: 8px;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px solid var(--border);
+      }
+      .trace-metric strong {
+        display: block;
+        font-size: 1.02rem;
+      }
+      .trace-metric span {
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+      .trace-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .trace-tag {
+        padding: 4px 7px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--ink);
+        font-size: 0.76rem;
+      }
+      details.trace-raw {
+        margin-top: 8px;
+      }
+      details.trace-raw summary {
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+      details.trace-raw pre {
+        margin-top: 6px;
+        max-height: 220px;
+        overflow: auto;
+        background: #f4efe7;
       }
       @media (max-width: 860px) {
         .hero, .chat-shell { grid-template-columns: 1fr; }
@@ -142,13 +269,23 @@
         <div class="card chat">
           <h2>Chat</h2>
           <div class="messages" id="messages"></div>
+          <div class="examples" aria-label="Example questions">
+            <button class="example" type="button">What is July 2025 OTB?</button>
+            <button class="example" type="button">How much group business do we have in July 2025?</button>
+            <button class="example" type="button">What changed in pickup over the last 14 days?</button>
+          </div>
           <form id="chat-form">
             <input id="question" name="question" placeholder="What's driving July and how did we book lately?" />
             <button type="submit">Ask</button>
           </form>
         </div>
         <div class="card events">
-          <h2>Live Events</h2>
+          <h2>Agent Trace</h2>
+          <p class="trace-intro">
+            Follow the work as it happens: skills loaded, tools called, outputs
+            returned, and the final answer. Raw event payloads are still available
+            under each step.
+          </p>
           <div class="event-log" id="event-log"></div>
         </div>
       </section>
@@ -159,7 +296,10 @@
       const eventLogEl = document.getElementById("event-log");
       const formEl = document.getElementById("chat-form");
       const questionEl = document.getElementById("question");
+      const exampleEls = document.querySelectorAll(".example");
       const threadId = crypto.randomUUID();
+      let traceStep = 0;
+      const seenToolCalls = new Set();
 
       async function loadHealth() {
         const response = await fetch("/health");
@@ -178,11 +318,307 @@
         return node;
       }
 
-      function addEvent(name, payload) {
-        const block = document.createElement("pre");
-        block.textContent = `${name}\n${payload}`;
-        eventLogEl.appendChild(block);
+      function formatJson(value, maxLength = 1200) {
+        let text = "";
+        try {
+          text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+        } catch {
+          text = String(value);
+        }
+        return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+      }
+
+      function compact(value, maxLength = 280) {
+        const text = formatJson(value, maxLength).replace(/\s+/g, " ").trim();
+        return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+      }
+
+      function addTrace(type, title, detail = "", raw = null, tags = [], metrics = []) {
+        traceStep += 1;
+        const card = document.createElement("article");
+        card.className = `trace-card ${type}`;
+
+        const header = document.createElement("div");
+        header.className = "trace-header";
+
+        const titleNode = document.createElement("div");
+        titleNode.className = "trace-title";
+        const kindNode = document.createElement("span");
+        kindNode.className = "trace-kind";
+        kindNode.textContent = type;
+        titleNode.append(kindNode, document.createTextNode(title));
+
+        const metaNode = document.createElement("div");
+        metaNode.className = "trace-meta";
+        metaNode.textContent = `step ${traceStep}`;
+
+        header.append(titleNode, metaNode);
+        card.appendChild(header);
+
+        if (detail) {
+          const detailNode = document.createElement("div");
+          detailNode.className = "trace-detail";
+          detailNode.textContent = detail;
+          card.appendChild(detailNode);
+        }
+
+        if (tags.length) {
+          const tagWrap = document.createElement("div");
+          tagWrap.className = "trace-tags";
+          tags.slice(0, 8).forEach((tag) => {
+            const tagNode = document.createElement("span");
+            tagNode.className = "trace-tag";
+            tagNode.textContent = tag;
+            tagWrap.appendChild(tagNode);
+          });
+          card.appendChild(tagWrap);
+        }
+
+        if (metrics.length) {
+          const metricWrap = document.createElement("div");
+          metricWrap.className = "trace-summary-grid";
+          metrics.forEach((metric) => {
+            const metricNode = document.createElement("div");
+            metricNode.className = "trace-metric";
+            const valueNode = document.createElement("strong");
+            valueNode.textContent = metric.value;
+            const labelNode = document.createElement("span");
+            labelNode.textContent = metric.label;
+            metricNode.append(valueNode, labelNode);
+            metricWrap.appendChild(metricNode);
+          });
+          card.appendChild(metricWrap);
+        }
+
+        if (raw) {
+          const details = document.createElement("details");
+          details.className = "trace-raw";
+          const summary = document.createElement("summary");
+          summary.textContent = "Raw event";
+          const pre = document.createElement("pre");
+          pre.textContent = formatJson(raw);
+          details.append(summary, pre);
+          card.appendChild(details);
+        }
+
+        eventLogEl.appendChild(card);
         eventLogEl.scrollTop = eventLogEl.scrollHeight;
+      }
+
+      function addEvent(name, payload) {
+        try {
+          const parsed = typeof payload === "string" ? JSON.parse(payload) : payload;
+          addStructuredEvent(name, parsed);
+        } catch {
+          addTrace("error", name, String(payload), payload);
+        }
+      }
+
+      function describeSkillEvent(payload) {
+        const skills = payload?.data?.chunk?.skills_metadata
+          ?? payload?.data?.output?.skills_metadata
+          ?? payload?.data?.chunk?.["SkillsMiddleware.before_agent"]?.skills_metadata
+          ?? [];
+        if (!Array.isArray(skills) || !skills.length) return false;
+        addTrace(
+          "skill",
+          "Skills loaded",
+          `${skills.length} revenue-management skill files are available. The agent can pull these in when the question needs specialist judgment.`,
+          payload,
+          skills.map((skill) => skill.name).filter(Boolean),
+        );
+        return true;
+      }
+
+      function describeToolCalls(payload) {
+        const calls = [];
+        collectToolCalls(payload, calls);
+        if (!calls.length) return false;
+        calls.forEach((call) => {
+          const callId = call.id ?? `${call.name}:${formatJson(call.args)}`;
+          if (seenToolCalls.has(callId)) return;
+          seenToolCalls.add(callId);
+          addTrace(
+            "tool",
+            `Tool requested: ${call.name}`,
+            summarizeToolInput(call.name, call.args ?? {}),
+            payload,
+          );
+        });
+        return true;
+      }
+
+      function collectToolCalls(value, calls) {
+        if (!value) return calls;
+        if (Array.isArray(value)) {
+          value.forEach((item) => collectToolCalls(item, calls));
+          return calls;
+        }
+        if (typeof value === "object") {
+          if (Array.isArray(value.tool_calls)) {
+            value.tool_calls.forEach((call) => {
+              if (call?.name) calls.push(call);
+            });
+          }
+          Object.values(value).forEach((item) => collectToolCalls(item, calls));
+        }
+        return calls;
+      }
+
+      function summarizeToolOutput(payload) {
+        const toolName = payload?.name;
+        const output = payload?.data?.output ?? payload?.data?.input;
+        if (!toolName || !String(toolName).startsWith("get_")) return false;
+        const parsed = parseMaybeJson(output);
+        const summary = summarizeToolResult(toolName, parsed);
+        addTrace("tool", `Tool returned: ${toolName}`, summary.detail, payload, summary.tags, summary.metrics);
+        return true;
+      }
+
+      function parseMaybeJson(value) {
+        if (typeof value !== "string") return value;
+        try {
+          return JSON.parse(value);
+        } catch {
+          return value;
+        }
+      }
+
+      function money(value) {
+        const number = Number(value ?? 0);
+        return `£${number.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+      }
+
+      function count(value) {
+        return Number(value ?? 0).toLocaleString("en-GB");
+      }
+
+      function summarizeToolInput(name, args) {
+        if (!args || typeof args !== "object") return compact(args);
+        if (args.stay_month) return `Stay month: ${args.stay_month}`;
+        if (args.booking_window_days) {
+          return `Pickup window: ${args.booking_window_days} days; future stays from ${args.future_stay_from ?? "not specified"}`;
+        }
+        if (args.start_month && args.end_month) return `Months: ${args.start_month} to ${args.end_month}`;
+        return compact(args);
+      }
+
+      function summarizeToolResult(name, data) {
+        if (!data || typeof data !== "object") {
+          return { detail: compact(data), tags: [], metrics: [] };
+        }
+        if (name === "get_otb_summary") {
+          return {
+            detail: `Current OTB for ${data.stay_month}. Default excludes Cancelled and Provisional rows.`,
+            tags: ["stay-date grain", "posted only", "non-cancelled"],
+            metrics: [
+              { label: "room nights", value: count(data.room_nights) },
+              { label: "total revenue", value: money(data.total_revenue) },
+              { label: "reservations", value: count(data.reservation_count) },
+              { label: "stay rows", value: count(data.row_count) },
+            ],
+          };
+        }
+        if (name === "get_segment_mix") {
+          const top = data.segments?.[0];
+          return {
+            detail: top
+              ? `Largest segment is ${top.market_name} (${top.macro_group}).`
+              : `No segment rows returned for ${data.stay_month}.`,
+            tags: (data.segments ?? []).slice(0, 5).map((row) => `${row.market_code}: ${count(row.room_nights)} RN`),
+            metrics: top ? [
+              { label: "top segment RN", value: count(top.room_nights) },
+              { label: "top segment revenue", value: money(top.total_revenue) },
+              { label: "denominator RN", value: count(data.denominator?.room_nights) },
+              { label: "denominator revenue", value: money(data.denominator?.total_revenue) },
+            ] : [],
+          };
+        }
+        if (name === "get_pickup_delta") {
+          return {
+            detail: `New booking activity over the last ${data.booking_window_days} days for stays from ${data.future_stay_from}.`,
+            tags: (data.by_segment ?? []).slice(0, 4).map((row) => row.market_name),
+            metrics: [
+              { label: "new reservations", value: count(data.new_reservations) },
+              { label: "new room nights", value: count(data.new_room_nights) },
+              { label: "new total revenue", value: money(data.new_total_revenue) },
+            ],
+          };
+        }
+        if (name === "get_block_vs_transient_mix") {
+          return {
+            detail: `Block and transient mix for ${data.stay_month}, with top-company concentration.`,
+            tags: (data.top_companies ?? []).slice(0, 3).map((row) => row.company_name),
+            metrics: [
+              { label: "block room nights", value: count(data.block_room_nights) },
+              { label: "transient room nights", value: count(data.transient_room_nights) },
+              { label: "block revenue", value: money(data.block_total_revenue) },
+              { label: "transient revenue", value: money(data.transient_total_revenue) },
+            ],
+          };
+        }
+        if (name === "get_room_type_adr") {
+          const top = data.highest_adr_room_type;
+          return {
+            detail: top ? `Highest ADR room type is ${top.room_type}.` : "No room-type rows returned.",
+            tags: (data.room_types ?? []).slice(0, 4).map((row) => row.room_type),
+            metrics: top ? [
+              { label: "highest ADR", value: money(top.adr) },
+              { label: "room nights", value: count(top.room_nights) },
+              { label: "room revenue", value: money(top.room_revenue) },
+            ] : [],
+          };
+        }
+        if (name === "get_cancellation_summary") {
+          return {
+            detail: `Cancelled-business view by ${data.date_basis}.`,
+            tags: ["cancelled rows", data.date_basis],
+            metrics: [
+              { label: "room nights", value: count(data.room_nights) },
+              { label: "total revenue", value: money(data.total_revenue) },
+              { label: "reservations", value: count(data.reservation_count) },
+            ],
+          };
+        }
+        return {
+          detail: compact(data),
+          tags: [],
+          metrics: [],
+        };
+      }
+
+      function addStructuredEvent(name, payload) {
+        if (describeSkillEvent(payload)) return;
+        if (summarizeToolOutput(payload)) return;
+        if (describeToolCalls(payload)) return;
+
+        if (name === "on_chain_start" && payload?.name === "otel-rm-agent") {
+          addTrace("thinking", "Agent started", "Planning the revenue-management answer and selecting relevant skills/tools.", payload);
+          return;
+        }
+        if (name === "on_chain_end" && isRootAgentEnd(payload)) {
+          addTrace("answer", "Agent finished", "Final answer delivered.", payload);
+          return;
+        }
+        if (name === "on_chat_model_end") {
+          const text = extractAssistantText(payload);
+          if (text) {
+            addTrace("answer", "Drafted final response", text, payload);
+            return;
+          }
+        }
+        if (name === "error") {
+          addTrace("error", "Stream error", compact(payload), payload);
+          return;
+        }
+        if (payload?.name?.includes("Middleware")) {
+          const readable = payload.name
+            .replace("Middleware", " middleware")
+            .replaceAll(".", " ");
+          addTrace("thinking", readable, compact(payload?.data ?? ""), payload);
+          return;
+        }
+        addTrace("thinking", name, compact(payload?.data ?? payload), payload);
       }
 
       function unescapeMessageText(text) {
@@ -252,6 +688,9 @@
         addMessage("user", question);
         const assistantNode = addMessage("assistant", "Thinking...");
         eventLogEl.innerHTML = "";
+        traceStep = 0;
+        seenToolCalls.clear();
+        addTrace("answer", "Question received", question);
 
         const streamUrl = `/api/chat/stream?q=${encodeURIComponent(question)}&thread_id=${encodeURIComponent(threadId)}`;
         const source = new EventSource(streamUrl);
@@ -304,6 +743,13 @@
         });
 
         questionEl.value = "";
+      });
+
+      exampleEls.forEach((button) => {
+        button.addEventListener("click", () => {
+          questionEl.value = button.textContent;
+          formEl.requestSubmit();
+        });
       });
 
       loadHealth().catch((err) => {
