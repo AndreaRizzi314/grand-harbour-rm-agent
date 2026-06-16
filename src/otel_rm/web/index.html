@@ -762,8 +762,11 @@
         const source = new EventSource(streamUrl);
         let finalText = "";
 
-        function applyAssistantText(evt) {
+        function applyAssistantText(evt, allowHistorical = false) {
           const payload = JSON.parse(evt.data);
+          if (!allowHistorical && payload.event !== "on_chat_model_end") {
+            return payload;
+          }
           const text = extractAssistantText(payload);
           if (text) {
             finalText = text;
@@ -776,7 +779,7 @@
         source.addEventListener("on_chat_model_end", (evt) => {
           try {
             addEvent("on_chat_model_end", evt.data);
-            applyAssistantText(evt);
+            applyAssistantText(evt, true);
           } catch (err) {
             addEvent("parse-error", String(err));
           }
@@ -792,15 +795,11 @@
         source.addEventListener("on_tool_start", (evt) => addEvent("on_tool_start", evt.data));
         source.addEventListener("on_chain_start", (evt) => {
           addEvent("on_chain_start", evt.data);
-          try {
-            applyAssistantText(evt);
-          } catch (err) {
-            addEvent("parse-error", String(err));
-          }
         });
         source.addEventListener("on_chain_end", (evt) => {
           try {
-            const payload = applyAssistantText(evt);
+            const payload = JSON.parse(evt.data);
+            addEvent("on_chain_end", evt.data);
             if (isRootAgentEnd(payload)) {
               source.close();
             }

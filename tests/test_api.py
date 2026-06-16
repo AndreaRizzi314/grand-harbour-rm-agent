@@ -60,6 +60,8 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "£" not in html
     assert "dollarAmount" in html
     assert "toLocaleString(\"en-US\"" in html
+    assert "allowHistorical = false" in html
+    assert 'payload.event !== "on_chat_model_end"' in html
     assert "Readable mode" not in html
     assert "Technical payloads are hidden" not in html
     assert 'addEvent("chain"' not in html
