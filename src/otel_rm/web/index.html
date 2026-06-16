@@ -329,6 +329,7 @@
       const threadId = crypto.randomUUID();
       let traceStep = 0;
       const seenToolCalls = new Set();
+      const seenInternalSteps = new Set();
 
       async function loadHealth() {
         const response = await fetch("/health");
@@ -621,11 +622,55 @@
         };
       }
 
+      function describeInternalStep(payload) {
+        const name = payload?.name ?? "";
+        if (!name.includes("Middleware")) return false;
+
+        const phase = name.includes("before_agent")
+          ? "before answering"
+          : name.includes("after_model")
+            ? "after model draft"
+            : name.includes("after_agent")
+              ? "after answer"
+              : "during run";
+        const key = `${name}:${phase}`;
+        if (seenInternalSteps.has(key)) return true;
+        seenInternalSteps.add(key);
+
+        const normalized = name.toLowerCase();
+        let title = "Internal step";
+        let detail = "The agent completed an internal orchestration step.";
+
+        if (normalized.includes("skills")) {
+          title = "Checking skill library";
+          detail = "The agent is checking which revenue-management skills are available for this question.";
+        } else if (normalized.includes("memory")) {
+          title = "Reading operating memory";
+          detail = "The agent is loading its standing instructions, such as using stay-date grain and excluding Cancelled/Provisional rows by default.";
+        } else if (normalized.includes("patchtoolcalls")) {
+          title = "Preparing tool routing";
+          detail = "The agent is normalizing tool calls so the request can be answered through the approved semantic tools.";
+        } else if (normalized.includes("humanintheloop")) {
+          title = "Checking approval rules";
+          detail = "The agent is checking whether the question needs human approval, such as historical as-of OTB.";
+        } else if (normalized.includes("todolist")) {
+          title = "Organizing the work";
+          detail = "The agent is keeping track of the answer steps before composing the final response.";
+        } else if (normalized.includes("filesystem")) {
+          title = "Checking skill files";
+          detail = "The agent is using the filesystem-backed skill pack for domain guidance.";
+        }
+
+        addTrace("thinking", title, `${detail} (${phase})`, payload);
+        return true;
+      }
+
       function addStructuredEvent(name, payload) {
         const eventName = payload?.event ?? name;
         if (describeSkillEvent(payload)) return;
         if (summarizeToolOutput(eventName, payload)) return;
         if (describeToolCalls(payload)) return;
+        if (describeInternalStep(payload)) return;
 
         if (eventName === "on_chain_start" && payload?.name === "otel-rm-agent") {
           addTrace("thinking", "Agent started", "Planning the revenue-management answer and selecting relevant skills/tools.", payload);
@@ -644,11 +689,6 @@
         }
         if (eventName === "error") {
           addTrace("error", "Stream error", "The stream reported an error. Enable raw output for technical details.", payload);
-          return;
-        }
-        if (payload?.name?.includes("Middleware")) {
-          // Middleware events are intentionally hidden in readable mode.
-          // The raw output toggle is available for debugging those internals.
           return;
         }
       }
@@ -722,6 +762,7 @@
         eventLogEl.innerHTML = "";
         traceStep = 0;
         seenToolCalls.clear();
+        seenInternalSteps.clear();
         addTrace("answer", "Question received", question);
 
         const streamUrl = `/api/chat/stream?q=${encodeURIComponent(question)}&thread_id=${encodeURIComponent(threadId)}`;

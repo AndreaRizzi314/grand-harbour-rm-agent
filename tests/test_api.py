@@ -48,6 +48,9 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "Agent Trace" in html
     assert "Tool requested" in html
     assert "Skills loaded" in html
+    assert "Checking skill library" in html
+    assert "Preparing tool routing" in html
+    assert "Reading operating memory" in html
     assert "Show raw JSON" in html
     assert "show-raw" in html
     assert 'addEvent("chain"' not in html
