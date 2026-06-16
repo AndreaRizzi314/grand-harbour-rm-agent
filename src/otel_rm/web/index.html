@@ -801,6 +801,7 @@
             const payload = JSON.parse(evt.data);
             addEvent("on_chain_end", evt.data);
             if (isRootAgentEnd(payload)) {
+              applyAssistantText(evt, true);
               source.close();
             }
           } catch (err) {
