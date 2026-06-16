@@ -48,6 +48,8 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "Agent Trace" in html
     assert "Tool requested" in html
     assert "Skills loaded" in html
+    assert "Show raw JSON" in html
+    assert "show-raw" in html
 
     get_settings.cache_clear()
 
