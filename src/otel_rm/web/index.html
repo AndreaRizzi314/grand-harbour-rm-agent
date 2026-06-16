@@ -494,10 +494,29 @@
         const toolName = payload?.name;
         const output = payload?.data?.output ?? payload?.data?.input;
         if (!toolName || !String(toolName).startsWith("get_")) return false;
-        const parsed = parseMaybeJson(output);
+        const parsed = extractToolData(output);
         const summary = summarizeToolResult(toolName, parsed);
         addTrace("tool", `Tool returned: ${toolName}`, summary.detail, payload, summary.tags, summary.metrics);
         return true;
+      }
+
+      function extractToolData(value) {
+        if (!value) return value;
+        if (typeof value === "object") {
+          if (typeof value.content === "string") return parseMaybeJson(value.content);
+          if (value.kwargs?.content) return parseMaybeJson(value.kwargs.content);
+          if (value.output) return extractToolData(value.output);
+          if (value.data?.output) return extractToolData(value.data.output);
+          return value;
+        }
+        if (typeof value !== "string") return value;
+        const direct = parseMaybeJson(value);
+        if (direct !== value) return direct;
+        const contentMatch = value.match(/content='([\s\S]*?)'\s+(?:additional_kwargs|name|id)=/);
+        if (contentMatch) {
+          return parseMaybeJson(unescapeMessageText(contentMatch[1]));
+        }
+        return value;
       }
 
       function parseMaybeJson(value) {
@@ -531,7 +550,7 @@
       function summarizeToolResult(name, data) {
         if (!data || typeof data !== "object") {
           return {
-            detail: "The tool returned a result. Enable raw output to inspect the technical payload.",
+            detail: `The ${name} tool completed and returned data for the agent to use in the answer.`,
             tags: [],
             metrics: [],
           };
@@ -610,7 +629,7 @@
           };
         }
         return {
-          detail: "The tool returned structured data. Enable raw output to inspect the full technical payload.",
+          detail: `The ${name} tool completed and returned structured data for the agent to use in the answer.`,
           tags: [],
           metrics: [],
         };
@@ -776,6 +795,7 @@
         source.onmessage = (evt) => addEvent("message", evt.data);
         source.addEventListener("on_chat_model_end", (evt) => {
           try {
+            addEvent("on_chat_model_end", evt.data);
             applyAssistantText(evt);
           } catch (err) {
             addEvent("parse-error", String(err));

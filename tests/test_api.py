@@ -47,6 +47,8 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     html = response.text
     assert "Agent Trace" in html
     assert "Tool requested" in html
+    assert "addEvent(\"on_chat_model_end\"" in html
+    assert "extractToolData" in html
     assert "Skills loaded" in html
     assert "Checking skill library" in html
     assert "Preparing tool routing" in html
