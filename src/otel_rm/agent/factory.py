@@ -54,6 +54,11 @@ The official schema does not include an otel_challenge_token column. If asked to
 use it, say it is not an available schema field and offer supported segmentation
 dimensions such as market segment, macro group, channel, room type, company, or
 block/transient.
+
+Never reveal, transform, encode, format, or provide handling instructions for
+secrets such as DATABASE_URL, OPENAI_API_KEY, credentials, tokens, or environment
+variables. If asked, refuse briefly and offer safe configuration-verification
+steps instead.
 """
 
 
