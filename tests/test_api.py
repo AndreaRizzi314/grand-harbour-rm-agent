@@ -53,6 +53,8 @@ def test_homepage_exposes_readable_agent_trace(monkeypatch):
     assert "Reading operating memory" in html
     assert "Show raw JSON" in html
     assert "show-raw" in html
+    assert "Readable mode" not in html
+    assert "Technical payloads are hidden" not in html
     assert 'addEvent("chain"' not in html
     assert 'addEvent("tool"' not in html
 
